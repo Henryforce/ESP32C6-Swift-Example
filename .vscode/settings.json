@@ -1,0 +1,6 @@
+{
+    "idf.adapterTargetName": "esp32c6",
+    "files.associations": {
+        "string": "cpp"
+    }
+}
