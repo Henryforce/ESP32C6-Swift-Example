@@ -1,21 +1,3 @@
-protocol I2CController {
-    func setup() throws (I2CControllerError)
-
-    func readRawData(
-        deviceAddress: UInt8, 
-        registerAddress: UInt8, 
-        length: Int,
-        timeout: UInt32
-    ) throws (I2CControllerError) -> [UInt8]
-
-    func writeRawData(
-        _ data: [UInt8],
-        deviceAddress: UInt8, 
-        registerAddress: UInt8, 
-        timeout: UInt32
-    ) throws (I2CControllerError)
-}
-
 final class ESP32I2CController: I2CController {
     
     let masterPort: i2c_port_t
@@ -111,17 +93,6 @@ final class ESP32I2CController: I2CController {
         guard let controllerError = I2CControllerError(result) else { return }
         throw controllerError
     }
-}
-
-// I2CControllerError
-
-enum I2CControllerError: Error {
-    case invalidLength
-    case invalidArgument
-    case fail
-    case invalidState
-    case timeout
-    case undefined(Int32)
 }
 
 extension I2CControllerError {

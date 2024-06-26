@@ -62,16 +62,13 @@ set(CMAKE_Swift_COMPILATION_MODE_DEFAULT wholemodule)
 set(CMAKE_Swift_COMPILATION_MODE wholemodule)
 enable_language(Swift)
 
-# target_sources(${COMPONENT_LIB}
-#     PRIVATE
-#     DeleteMe.swift
-# )
-
 # List of Swift source files to build.
 target_sources(${COMPONENT_LIB}
     PRIVATE
-    I2CController.swift
-    LTR390.swift
+    ../i2c/I2CControllerError.swift
+    ../i2c/I2CController.swift
+    ../i2c/ESP32I2CController.swift
+    ../LTR390/LTR390.swift
+    ../LTR390/LTR390Impl.swift
     Main.swift
-)
-
+) 
