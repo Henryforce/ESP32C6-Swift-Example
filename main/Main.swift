@@ -1,27 +1,10 @@
 // Main.
 
-// typealias GattsEventHandler = @convention(c) (esp_gatts_cb_event_t, esp_gatt_if_t, UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) -> Void
-// typealias FakeEventHandler = (esp_gatts_cb_event_t, esp_gatt_if_t, UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) -> Void
-
-// final class BLESingleton {
-//   static let shared = BLESingleton()
-
-//   var callback: FakeEventHandler?
-
-//   init() { }
-// }
+var bleController: ESP32BLEController?
 
 @_cdecl("app_main")
 func app_main() {
   print("🏎️   Hello, Embedded Swift!")
-
-  // _ = esp_bt_controller_enable(ESP_BT_MODE_BLE)
-  // BLESingleton.shared.callback = { (event, gatts_if, param) in
-  // }
-  // let gatts_event_handler: GattsEventHandler = { (event, gatts_if, param) in
-  //   BLESingleton.shared.callback?(event, gatts_if, param)
-  // }
-  // _ = esp_ble_gatts_register_callback(gatts_event_handler)
 
   // let deleteMe = DeleteMe()
   let i2CController = ESP32I2CController(
@@ -42,6 +25,27 @@ func app_main() {
   } catch (let error) {
     print("Error \(error)")
   }
+
+  // TODO: Handle error.
+  _ = nvs_flash_init()
+
+  let gattsEventHandler: ESP32BLEController.GattsEventHandler = { (event, gattIF, param) in
+    // No-op.
+  }
+  let uuid = esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: 0x00FF))
+  let id = esp_gatt_id_t(uuid: uuid, inst_id: 0)
+  let serviceID = esp_gatt_srvc_id_t(id: id, is_primary: true)
+  let profile = GattsProfile(
+    gattsEventHandler: gattsEventHandler,
+    gattsIF: UInt16(ESP_GATT_IF_NONE), // Initial is always ESP_GATT_IF_NONE
+    serviceHandle: 0, // It will be later updated.
+    serviceID: serviceID,
+    charHandle: 0, // It will be later updated.
+    charUUID: esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: 0xFF01)),
+    descrUUID: esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: UInt16(ESP_GATT_UUID_CHAR_CLIENT_CONFIG)))
+  )
+  bleController = ESP32BLEController(profile: profile)
+
 
   while (true) {
     do {
