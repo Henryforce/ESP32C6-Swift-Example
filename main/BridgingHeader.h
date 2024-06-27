@@ -38,6 +38,11 @@
 #include <esp_bt_main.h>
 #include <esp_gatt_common_api.h>
 
+// BLE Controller interface
+// ======================
+
+#include "../ble/ESP32BLEControllerInterface.h"
+
 // ESP Matter
 // ==========
 

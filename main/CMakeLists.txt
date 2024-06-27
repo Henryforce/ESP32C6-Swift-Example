@@ -1,6 +1,7 @@
 # Register the app as an IDF component
 idf_component_register(
-    SRCS /dev/null # We don't have any C++ sources
+    # SRCS /dev/null # We don't have any C++ sources
+    SRCS "../ble/ESP32BLEControllerInterface.cpp"
     PRIV_INCLUDE_DIRS "."
 )
 
@@ -70,5 +71,6 @@ target_sources(${COMPONENT_LIB}
     ../i2c/ESP32I2CController.swift
     ../LTR390/LTR390.swift
     ../LTR390/LTR390Impl.swift
+    ../ble/ESP32BLEController.swift
     Main.swift
 ) 

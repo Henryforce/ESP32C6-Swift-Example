@@ -1,0 +1,2 @@
+
+esp_bt_controller_config_t buildDefaultBTControllerConfiguration();
