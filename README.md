@@ -45,3 +45,5 @@ Note that some changes might require a clean.
 This project is connected to a development board that has a LTR390 light sensor. See (datasheet)[https://optoelectronics.liteon.com/upload/download/DS86-2015-0004/LTR-390UV_Final_%20DS_V1%201.pdf].
 
 This project makes use of the (I2C library)[https://docs.espressif.com/projects/esp-idf/en/v5.2.2/esp32/api-reference/peripherals/i2c.html] from Espressif. Note that the attached link is versioned and might not be up to date with the latest release.
+
+This project also leverages the Bluetooth LE libraries provided by ESP-IDF to advertise a service for reading the sensor data.

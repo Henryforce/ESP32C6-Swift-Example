@@ -47,10 +47,12 @@ final class ESP32BLEController {
         _ = esp_bluedroid_enable()
 
         _ = esp_ble_gatts_register_callback({ (event, gattsIF, param) in
+            // Call the singleton as capturing objects is not allowed on c closures.
             BLESingleton.shared.gattsEventHandler?(event, gattsIF, param)
         })
 
         _ = esp_ble_gap_register_callback({ (event, param) in
+            // Call the singleton as capturing objects is not allowed on c closures.
             BLESingleton.shared.gapEventHandler?(event, param)
         })
 
