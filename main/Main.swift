@@ -6,7 +6,6 @@ var bleController: ESP32BLEController?
 func app_main() {
   print("🏎️   Hello, Embedded Swift!")
 
-  // let deleteMe = DeleteMe()
   let i2CController = ESP32I2CController(
     masterPort: I2C_NUM_0,
     sdaPin: 6,
@@ -26,9 +25,6 @@ func app_main() {
     print("Error \(error)")
   }
 
-  // TODO: Handle error.
-  _ = nvs_flash_init()
-
   let gattsEventHandler: ESP32BLEController.GattsEventHandler = { (event, gattIF, param) in
     // No-op.
   }
@@ -47,21 +43,21 @@ func app_main() {
   bleController = ESP32BLEController(profile: profile)
 
 
-  while (true) {
-    do {
-      try ltr390.setupInALSMode()
-      vTaskDelay(150)
-      let luminosity = try ltr390.readLuminosity()
-      print("Luminosity: \(Int(luminosity))")
+  // while (true) {
+  //   do {
+  //     try ltr390.setupInALSMode()
+  //     vTaskDelay(150)
+  //     let luminosity = try ltr390.readLuminosity()
+  //     print("Luminosity: \(Int(luminosity))")
 
-      try ltr390.setupInUVMode()
-      vTaskDelay(150)
-      let uvIndex = try ltr390.readUVIndex()
-      print("UVIndex: \(Int(uvIndex))")
-    } catch {
-      print("LTR390 Read Error: \(error)")
-    }
-  }
+  //     try ltr390.setupInUVMode()
+  //     vTaskDelay(150)
+  //     let uvIndex = try ltr390.readUVIndex()
+  //     print("UVIndex: \(Int(uvIndex))")
+  //   } catch {
+  //     print("LTR390 Read Error: \(error)")
+  //   }
+  // }
 }
 
 extension LTR390 {
