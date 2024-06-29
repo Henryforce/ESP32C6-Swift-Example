@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 #include <math.h>
-// #include <string>
+#include <string.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
