@@ -43,7 +43,7 @@ final class ESP32BLEController {
     private let readEventHandler: BLEReadEventHandler
 
     // Dictionary that maps an attribute handle to the service index (in the profile).
-    private var serviceHandleMap = [UInt16: UInt16]()
+    private var serviceHandleMap = [UInt16: UInt8]()
 
     // Dictionary that maps an attribute handle to the service and characteristics indexes (in the profile).
     private var characteristicHandleMap = [UInt16: BLEServiceCharacteristicIndex]()
@@ -239,12 +239,11 @@ final class ESP32BLEController {
             return
         }
 
+        // TODO: update to potentially add more services.
         let service = profile.services[0]
-
-        //  (which includes esp_gatt_id_t: id and bool: is_primary).
         var serviceID = esp_gatt_srvc_id_t(
             id: esp_gatt_id_t(
-                uuid: service.uuid.espUUID,
+                uuid: service.uuid.esp32UUID,
                 inst_id: 0x00
             ),
             is_primary: service.primary
@@ -276,6 +275,10 @@ final class ESP32BLEController {
     private func handleReadEvent(gattsIF: esp_gatt_if_t, param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
         let readEvent = read_read_evt_param(param)
         print("Read event \(readEvent.conn_id), handle: \(readEvent.handle)")
+
+        if let index = characteristicHandleMap[readEvent.handle] {
+            print("Reading service \(index.serviceIndex), characteristic \(index.characteristicIndex)")
+        }
         
         // Request the data to be passed when a characteristic is being read.
         let rawData = readEventHandler()
@@ -292,9 +295,7 @@ final class ESP32BLEController {
         }
 
         var response = esp_gatt_rsp_t(attr_value: responseValue)
-        withUnsafeMutablePointer(to: &response) { pointer in
-            esp_ble_gatts_send_response(gattsIF, readEvent.conn_id, readEvent.trans_id, ESP_GATT_OK, pointer)
-        }
+        esp_ble_gatts_send_response(gattsIF, readEvent.conn_id, readEvent.trans_id, ESP_GATT_OK, &response)
     }
 
     private func handleWriteEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
@@ -319,16 +320,15 @@ final class ESP32BLEController {
         // esp_gatt_srvc_id_t: service_id (which includes esp_gatt_id_t: id and bool: is_primary).
         let createEvent = read_create_evt_param(param)
 
-        // TODO: this will crash if the arc4random is not working properly.
-        // let rawUUID = createEvent.service_id.id.uuid
-        // var serviceIndex: UInt16 = 0
-        // for service in profile.services {
-        //     if service.uuid.isEqual(to: rawUUID) {
-        //         serviceHandleMap[createEvent.service_handle] = serviceIndex
-        //         break
-        //     }
-        //     serviceIndex += 1
-        // }
+        let rawUUID = createEvent.service_id.id.uuid
+        var serviceIndex: UInt8 = 0
+        for service in profile.services {
+            if service.uuid.isEqual(to: rawUUID) {
+                serviceHandleMap[createEvent.service_handle] = serviceIndex
+                break
+            }
+            serviceIndex += 1
+        }
 
         esp_ble_gatts_start_service(createEvent.service_handle)
 
@@ -356,15 +356,31 @@ final class ESP32BLEController {
         // The event contains esp_gatt_status_t: status, uint16_t: attr_handle, 
         // uint16_t: service_handle and esp_bt_uuid_t: char_uuid
         let addCharacteristicEvent = read_add_char_evt_param(param)
-        print("Add characteristic event, handle: \(addCharacteristicEvent.attr_handle)")
+        
+        guard let serviceIndex = serviceHandleMap[addCharacteristicEvent.service_handle] else {
+            print("Invalid service handle: \(addCharacteristicEvent.service_handle)")
+            return
+        }
+        print("Add characteristic event, handle: \(addCharacteristicEvent.attr_handle), index: \(serviceIndex)")
 
-        // TODO: enable this once the arc4random problem is fixed.
-        // if let serviceIndex = serviceHandleMap[addCharacteristicEvent.service_handle] {
-        //     print("Found service handle for service at index: \(serviceIndex)")
-        // }
+        let rawUUID = addCharacteristicEvent.char_uuid
+        var characteristicIndex: UInt8 = 0
+        let service = profile.services[Int(serviceIndex)]
+        for characteristic in service.characteristics {
+            if characteristic.uuid.isEqual(to: rawUUID) {
+                let index = BLEServiceCharacteristicIndex(
+                    serviceIndex: serviceIndex,
+                    characteristicIndex: characteristicIndex
+                )
+                characteristicHandleMap[addCharacteristicEvent.attr_handle] = index
+                break
+            }
+            characteristicIndex += 1
+        }
 
         // print("Description UUID \(ESP_GATT_UUID_CHAR_CLIENT_CONFIG)") // 0x2902
-        let description = profile.services[0].characteristics[0].description
+        let characteristic = service.characteristics[Int(characteristicIndex)]
+        let description = characteristic.description
         var descrUUID = description.uuid.esp32UUID
 
         var error = swift_temp_esp_ble_gatts_get_attr_value(addCharacteristicEvent.attr_handle)
@@ -400,9 +416,7 @@ final class ESP32BLEController {
             latency: 0,
             timeout: 400
         )
-        withUnsafeMutablePointer(to: &connectionParameters) { pointer in
-            esp_ble_gap_update_conn_params(pointer)
-        }
+        esp_ble_gap_update_conn_params(&connectionParameters)
     }
 
     private func handleDisconnectEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
@@ -425,9 +439,7 @@ final class ESP32BLEController {
     }
 
     private func startAdvertising() {
-        withUnsafeMutablePointer(to: &advertisementParameters) { pointer in
-            esp_ble_gap_start_advertising(pointer)
-        }
+        esp_ble_gap_start_advertising(&advertisementParameters)
     }
 
 }
@@ -462,7 +474,7 @@ extension BLECharacteristicProperties {
 }
 
 extension BLEUUID {
-    var espUUID: esp_bt_uuid_t {
+    var esp32UUID: esp_bt_uuid_t {
         switch length {
             case .sixteenBits:
                 return esp_bt_uuid_t(

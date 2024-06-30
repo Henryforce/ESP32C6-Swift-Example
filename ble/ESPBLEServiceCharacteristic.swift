@@ -21,6 +21,7 @@ struct BLECharacteristicDescription {
     let permissions: BLECharacteristicPermissions
 }
 
+// TODO: add support for 128 bits UUID.
 struct BLEUUID: Equatable, Hashable {
     enum BLEUUIDSize: Equatable, Hashable {
         case sixteenBits
@@ -73,21 +74,4 @@ struct BLECharacteristicProperties: OptionSet {
     static let read = BLECharacteristicProperties(rawValue: 1 << 0)
     static let write = BLECharacteristicProperties(rawValue: 1 << 1)
     static let notify = BLECharacteristicProperties(rawValue: 1 << 2)
-}
-
-extension BLEUUID {
-    var esp32UUID: esp_bt_uuid_t {
-        switch length {
-            case .sixteenBits:
-                return esp_bt_uuid_t(
-                    len: 2, 
-                    uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: uuid16)
-                )
-            case .thirtyTwoBits:
-                return esp_bt_uuid_t(
-                    len: 4, 
-                    uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid32: uuid32)
-                )
-        }
-    }
 }
