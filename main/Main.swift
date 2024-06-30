@@ -7,6 +7,27 @@ var globalLuminosity: UInt32 = 0
 func app_main() {
   print("🏎️   Hello, Embedded Swift!")
 
+  let bleProfile = BLEProfile(
+    services: [
+      BLEService(
+        uuid: BLEUUID(uuid16: 0x00FF),
+        primary: true,
+        characteristics: [
+          BLECharacteristic(
+            uuid: BLEUUID(uuid16: 0xFF01),
+            dataLength: 4,
+            permissions: [.read, .write],
+            properties: [.read, .write, .notify],
+            description: BLECharacteristicDescription(
+              uuid: .clientConfiguration,
+              permissions: [.read, .write]
+            )
+          )
+        ]
+      )
+    ]
+  )
+
   let i2CController = ESP32I2CController(
     masterPort: I2C_NUM_0,
     sdaPin: 6,
@@ -37,20 +58,10 @@ func app_main() {
         UInt8(luminosity & 0xFF),
     ]
   }
-  // TODO: clean up this ble init.
-  let uuid = esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: 0x00FF))
-  let id = esp_gatt_id_t(uuid: uuid, inst_id: 0)
-  let serviceID = esp_gatt_srvc_id_t(id: id, is_primary: true)
-  let profile = GattsProfile(
-    gattsIF: UInt16(ESP_GATT_IF_NONE), // Initial is always ESP_GATT_IF_NONE
-    serviceHandle: 0, // It will be later updated.
-    serviceID: serviceID,
-    charHandle: 0, // It will be later updated.
-    charUUID: esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: 0xFF01)),
-    descrUUID: esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: UInt16(ESP_GATT_UUID_CHAR_CLIENT_CONFIG)))
-  )
+
+  // Start the BLE operation.  
   bleController = ESP32BLEController(
-    profile: profile,
+    profile: bleProfile,
     readEventHandler: readEventHandler
   )
 
@@ -91,4 +102,9 @@ extension LTR390 {
     try writeMode(.ALS, enableLightSensor: true)
     // print("Mode: \(try readMode().rawValue)")
   }
+}
+
+extension BLEUUID {
+  /// The characteristic UUID used for the luminosity.
+  static let luminosity = BLEUUID(uuid16: 0x00FF)
 }
