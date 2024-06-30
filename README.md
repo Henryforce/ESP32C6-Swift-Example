@@ -1,4 +1,6 @@
-# Embedded Swift Matter Example: Empty application template
+# WORK IN PROGRESS
+
+# Embedded Swift Example: BLE + I2C in the ESP32C6
 
 > [!IMPORTANT]
 > Please follow (Apple's tutorial)[https://apple.github.io/swift-matter-examples/tutorials/swiftmatterexamples/setup-macos] on how to setup the required toolchain
