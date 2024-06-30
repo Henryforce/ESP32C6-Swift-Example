@@ -76,7 +76,9 @@ enum LTR390Register {
 }
 
 protocol LTR390 {
+    func readRawUVIndex() throws(LTR390Error) -> UInt32
     func readUVIndex() throws(LTR390Error) -> Double
+    func readRawLuminosity() throws(LTR390Error) -> UInt32
     func readLuminosity() throws(LTR390Error) -> Double
     
     func readMode() throws(LTR390Error) -> LTR390Mode

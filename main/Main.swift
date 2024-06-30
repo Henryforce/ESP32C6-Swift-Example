@@ -1,6 +1,7 @@
 // Main.
 
 var bleController: ESP32BLEController?
+var globalLuminosity: UInt32 = 0
 
 @_cdecl("app_main")
 func app_main() {
@@ -21,18 +22,26 @@ func app_main() {
   let ltr390 = LTR390Impl(i2CController: i2CController)
   do {
     try ltr390.setup()
+    try ltr390.setupInALSMode()
   } catch (let error) {
     print("Error \(error)")
+    return
   }
 
-  let gattsEventHandler: ESP32BLEController.GattsEventHandler = { (event, gattIF, param) in
-    // No-op.
+  let readEventHandler: BLEReadEventHandler = {
+    let luminosity = globalLuminosity
+    return [
+        0,
+        UInt8((luminosity & 0xFF0000) >> 16),
+        UInt8((luminosity & 0xFF00) >> 8),
+        UInt8(luminosity & 0xFF),
+    ]
   }
+  // TODO: clean up this ble init.
   let uuid = esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: 0x00FF))
   let id = esp_gatt_id_t(uuid: uuid, inst_id: 0)
   let serviceID = esp_gatt_srvc_id_t(id: id, is_primary: true)
   let profile = GattsProfile(
-    gattsEventHandler: gattsEventHandler,
     gattsIF: UInt16(ESP_GATT_IF_NONE), // Initial is always ESP_GATT_IF_NONE
     serviceHandle: 0, // It will be later updated.
     serviceID: serviceID,
@@ -40,24 +49,28 @@ func app_main() {
     charUUID: esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: 0xFF01)),
     descrUUID: esp_bt_uuid_t(len: 2, uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: UInt16(ESP_GATT_UUID_CHAR_CLIENT_CONFIG)))
   )
-  bleController = ESP32BLEController(profile: profile)
+  bleController = ESP32BLEController(
+    profile: profile,
+    readEventHandler: readEventHandler
+  )
 
+  while (true) {
+    do {
+      // try ltr390.setupInALSMode()
+      vTaskDelay(150)
+      // globalLuminosity = try ltr390.readRawLuminosity() 
+      let luminosity = try ltr390.readLuminosity()
+      globalLuminosity = UInt32(luminosity)
+      print("Luminosity: \(globalLuminosity)")
 
-  // while (true) {
-  //   do {
-  //     try ltr390.setupInALSMode()
-  //     vTaskDelay(150)
-  //     let luminosity = try ltr390.readLuminosity()
-  //     print("Luminosity: \(Int(luminosity))")
-
-  //     try ltr390.setupInUVMode()
-  //     vTaskDelay(150)
-  //     let uvIndex = try ltr390.readUVIndex()
-  //     print("UVIndex: \(Int(uvIndex))")
-  //   } catch {
-  //     print("LTR390 Read Error: \(error)")
-  //   }
-  // }
+      // try ltr390.setupInUVMode()
+      // vTaskDelay(150)
+      // let uvIndex = try ltr390.readUVIndex()
+      // print("UVIndex: \(Int(uvIndex))")
+    } catch {
+      print("LTR390 Read Error: \(error)")
+    }
+  }
 }
 
 extension LTR390 {
