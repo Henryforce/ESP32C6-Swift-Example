@@ -14,14 +14,21 @@ final class LTR390Impl<T: I2CController>: LTR390 {
         self.i2CController = i2CController
     }
 
-    func readUVIndex() throws(LTR390Error) -> Double {
+    func readRawUVIndex() throws(LTR390Error) -> UInt32 {
         let rawData = try readI2CData(at: .uvData)
-        let uvIndexInt = (UInt32(rawData[2]) << 16) | (UInt32(rawData[1]) << 8) | UInt32(rawData[0])
+        return (UInt32(rawData[2]) << 16) | (UInt32(rawData[1]) << 8) | UInt32(rawData[0])
+    }
+    func readUVIndex() throws(LTR390Error) -> Double {
+        let uvIndexInt = try readRawUVIndex()
         return Double(uvIndexInt) / uvSensitivity
     }
-    func readLuminosity() throws(LTR390Error) -> Double {
+
+    func readRawLuminosity() throws(LTR390Error) -> UInt32 {
         let rawData = try readI2CData(at: .alsData)
-        let alsDataInt = (UInt32(rawData[2]) << 16) | (UInt32(rawData[1]) << 8) | UInt32(rawData[0])
+        return (UInt32(rawData[2]) << 16) | (UInt32(rawData[1]) << 8) | UInt32(rawData[0])
+    }
+    func readLuminosity() throws(LTR390Error) -> Double {
+        let alsDataInt = try readRawLuminosity()
         return (0.6 * Double(alsDataInt)) / (Double(latestGain.rawValue) * latestResolution.integrationFactor)
     }
     
