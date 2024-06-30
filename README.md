@@ -1,5 +1,7 @@
 # WORK IN PROGRESS
 
+This example works as expected (granted that you have an LTR390 sensor connected to a ESP32C6) but it is ongoing constant updates and refactoring to improve the code's readability.
+
 # Embedded Swift Example: BLE + I2C in the ESP32C6
 
 > [!IMPORTANT]
