@@ -1,6 +1,13 @@
 {
     "idf.adapterTargetName": "esp32c6",
     "files.associations": {
-        "string": "cpp"
+        "string": "cpp",
+        "__bit_reference": "cpp",
+        "bitset": "cpp",
+        "__memory": "cpp",
+        "limits": "cpp",
+        "locale": "cpp",
+        "ratio": "cpp",
+        "tuple": "cpp"
     }
 }

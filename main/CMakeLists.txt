@@ -71,6 +71,7 @@ target_sources(${COMPONENT_LIB}
     ../i2c/ESP32I2CController.swift
     ../LTR390/LTR390.swift
     ../LTR390/LTR390Impl.swift
+    ../ble/ESPBLEServiceCharacteristic.swift
     ../ble/ESP32BLEController.swift
     Main.swift
 ) 
