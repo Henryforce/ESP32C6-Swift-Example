@@ -51,51 +51,50 @@ final class ESP32I2CController: I2CController {
         throw controllerError
     }
 
-    func readRawData(
-        deviceAddress: UInt8, 
-        registerAddress: UInt8, 
+    func writeReadRawData(
+        _ writeData: [UInt8],
+        deviceAddress: UInt8,  
         length: Int,
         timeout: UInt32
     ) throws (I2CControllerError) -> [UInt8] {
-        guard length > 0 else { throw I2CControllerError.invalidLength }
-        var data = Array(repeating: UInt8(0xFF), count: length)
-        let registerAddressArray = [registerAddress]
+        guard writeData.count > 0, length > 0 else { throw I2CControllerError.invalidLength }
+        var readData = Array(repeating: UInt8(0x00), count: length)
         let result = i2c_master_write_read_device(
             masterPort,
             deviceAddress,
-            registerAddressArray,
-            1,
-            &data,
+            writeData,
+            writeData.count,
+            &readData,
             length,
             timeout
-        );
-        guard let controllerError = I2CControllerError(result) else { return data }
-        throw controllerError
+        )
+        if let controllerError = I2CControllerError(result) {
+            throw controllerError
+        }
+        return readData
     }
 
     func writeRawData(
         _ data: [UInt8],
-        deviceAddress: UInt8, 
-        registerAddress: UInt8, 
+        deviceAddress: UInt8,  
         timeout: UInt32
     ) throws (I2CControllerError) {
         guard !data.isEmpty else { throw I2CControllerError.invalidLength }
-        var rawData = [registerAddress]
-        rawData.append(contentsOf: data)
-        let length = rawData.count
+        let length = data.count
         let result = i2c_master_write_to_device(
             masterPort, 
             deviceAddress, 
-            rawData, 
+            data, 
             length, 
             timeout
         )
-        guard let controllerError = I2CControllerError(result) else { return }
-        throw controllerError
+        if let controllerError = I2CControllerError(result) { 
+            throw controllerError
+        }
     }
 }
 
-extension I2CControllerError {
+fileprivate extension I2CControllerError {
     init?(_ error: esp_err_t) {
         guard error != ESP_OK else { return nil }
         switch error {
