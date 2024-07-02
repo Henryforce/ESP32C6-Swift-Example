@@ -1,7 +1,12 @@
-/// https://esphome.io/components/sensor/ltr390.html
+// Datasheet available in:
+// https://esphome.io/components/sensor/ltr390.html
+
+fileprivate Constants {
+    static let deviceAddress: UInt8 = 0x53
+    static let uvSensitivity: Double = 2300.0
+}
+
 final class LTR390Impl<T: I2CController>: LTR390 {
-    private let deviceAddress: UInt8 = 0x53
-    private let uvSensitivity = 2300.0
     private let i2CController: T
 
     private var latestMode = LTR390Mode.UV
@@ -20,7 +25,7 @@ final class LTR390Impl<T: I2CController>: LTR390 {
     }
     func readUVIndex() throws(LTR390Error) -> Double {
         let uvIndexInt = try readRawUVIndex()
-        return Double(uvIndexInt) / uvSensitivity
+        return Double(uvIndexInt) / Constants.uvSensitivity
     }
 
     func readRawLuminosity() throws(LTR390Error) -> UInt32 {
@@ -41,7 +46,7 @@ final class LTR390Impl<T: I2CController>: LTR390 {
     }
     func writeMode(_ mode: LTR390Mode, enableLightSensor: Bool) throws(LTR390Error) {
         let mainControlData = (mode.rawValue << 3) | (enableLightSensor ? 0x2 : 0x0)
-        try writeI2CData([mainControlData], at: .mainControl)
+        try writeI2CData([LTR390Register.mainControl.address, mainControlData])
         self.latestMode = mode
         self.latestLightSensorEnabledStatus = enableLightSensor
     }
@@ -53,7 +58,7 @@ final class LTR390Impl<T: I2CController>: LTR390 {
         return validGain
     }
     func writeGain(_ gain: LTR390Gain) throws(LTR390Error) {
-        try writeI2CData([gain.rawValue], at: .gain)
+        try writeI2CData([LTR390Register.gain.address, gain.rawValue])
         self.latestGain = gain
     }
 
@@ -68,7 +73,7 @@ final class LTR390Impl<T: I2CController>: LTR390 {
     }
     func writeResolution(_ resolution: LTR390Resolution) throws(LTR390Error) {
         let measurementResolutionData = (resolution.rawValue << 4) | latestMeasurementRate.rawValue
-        try writeI2CData([measurementResolutionData], at: .measurementResolution)
+        try writeI2CData([LTR390Register.measurementResolution.address, measurementResolutionData])
         self.latestResolution = resolution
     }
 
@@ -82,15 +87,15 @@ final class LTR390Impl<T: I2CController>: LTR390 {
     }
     func writeMeasurementRate(_ measurementRate: LTR390MeasurementRate) throws(LTR390Error) {
         let measurementResolutionData = (latestResolution.rawValue << 4) | measurementRate.rawValue
-        try writeI2CData([measurementResolutionData], at: .measurementResolution)
+        try writeI2CData([LTR390Register.measurementResolution.address, measurementResolutionData])
         self.latestMeasurementRate = measurementRate
     }
 
     private func readI2CData(at register: LTR390Register) throws(LTR390Error) -> [UInt8] {
         do {
-            return try i2CController.readRawData(
-                deviceAddress: deviceAddress, 
-                registerAddress: register.address, 
+            return try i2CController.writeReadRawData(
+                [register.address],
+                deviceAddress: Constants.deviceAddress,
                 length: register.length,
                 timeout: 10
             )
@@ -99,16 +104,11 @@ final class LTR390Impl<T: I2CController>: LTR390 {
         }
     }
 
-    private func writeI2CData(
-        _ data:[UInt8],
-        at register: LTR390Register
-    ) throws(LTR390Error) {
-        guard data.count == register.length else { throw LTR390Error.invalidDataLength }
+    private func writeI2CData(_ data:[UInt8]) throws(LTR390Error) {
         do {
             try i2CController.writeRawData(
                 data,
-                deviceAddress: deviceAddress, 
-                registerAddress: register.address, 
+                deviceAddress: Constants.deviceAddress,
                 timeout: 10
             )
         } catch (let error) {
