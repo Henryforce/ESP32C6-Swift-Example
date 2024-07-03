@@ -45,7 +45,15 @@ func app_main() {
     try ltr390.setup()
     try ltr390.setupInALSMode()
   } catch (let error) {
-    print("Error \(error)")
+    print("LTR390 Setup error: \(error)")
+    return
+  }
+
+  let aht20 = AHT20Impl(i2CController: i2CController)
+  do {
+    try aht20.setup()
+  } catch (let error) {
+    print("AHT20 Setup error: \(error)")
     return
   }
 
@@ -65,11 +73,14 @@ func app_main() {
     readEventHandler: readEventHandler
   )
 
+  let tickPeriod = portTickPeriodMs()
+
   while (true) {
     do {
       // try ltr390.setupInALSMode()
-      vTaskDelay(150)
-      // globalLuminosity = try ltr390.readRawLuminosity() 
+      
+      vTaskDelay(1500 / tickPeriod)
+      
       let luminosity = try ltr390.readLuminosity()
       globalLuminosity = UInt32(luminosity)
       print("Luminosity: \(globalLuminosity)")
