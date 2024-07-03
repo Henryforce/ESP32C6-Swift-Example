@@ -1,7 +1,7 @@
 // Datasheet available in:
 // https://esphome.io/components/sensor/ltr390.html
 
-fileprivate Constants {
+fileprivate enum Constants {
     static let deviceAddress: UInt8 = 0x53
     static let uvSensitivity: Double = 2300.0
 }
