@@ -1,2 +1,0 @@
-
-TickType_t portTickPeriodMs();

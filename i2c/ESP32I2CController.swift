@@ -57,7 +57,7 @@ final class ESP32I2CController: I2CController {
         length: Int,
         timeout: UInt32
     ) throws (I2CControllerError) -> [UInt8] {
-        guard writeData.count > 0, length > 0 else { throw I2CControllerError.invalidLength }
+        guard length > 0 else { throw I2CControllerError.invalidLength }
         var readData = Array(repeating: UInt8(0x00), count: length)
         let result = i2c_master_write_read_device(
             masterPort,

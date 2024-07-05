@@ -1,26 +1,30 @@
 
-final class AHT20Impl<T: I2CController>: AHT20 {
-    private let i2CController: T
+final class AHT20Impl<I: I2CController, T: TaskDelayController>: AHT20 {
+    private let i2CController: I
+    private let taskDelayController: T
 
-    init(i2CController: T) {
+    init(i2CController: I, taskDelayController: T) {
         self.i2CController = i2CController
+        self.taskDelayController = taskDelayController
     }
 
     func setup() throws(AHT20Error) {
-        // TODO: delay or sleep for at least 20 ms.\
-        // sleep(20)
+        taskDelayController.delay(milliseconds: 21)
 
         try run(command: .softReset)
 
-        // TODO: delay or sleep for at least 20 ms.
+        taskDelayController.delay(milliseconds: 21)
 
-        try waitForReadyStatus()
+        try run(command: .initialize)
 
-        try run(command: .calibrate)
+        taskDelayController.delay(milliseconds: 75)
 
-        try waitForReadyStatus()
+        // First data check.
+        print("Read AHT20 data")
+        _ = try readData(polling: true)
 
-        try waitForCalibration()
+        print("Verify calibration")
+        try verifyCalibration()
     }
 
     func readData(polling: Bool) throws(AHT20Error) -> AHT20Data {
@@ -31,7 +35,7 @@ final class AHT20Impl<T: I2CController>: AHT20 {
 
         // Data is returned as follows (blocks of 1 byte):
         // [Status] [Humidity MSB] [Humidity] [Humidity LSB | Temp MSB] [Temp] [Temp LSB]
-        let rawData = try readI2CData(length: Constants.measurementLength)
+        let rawData = try readI2CData(readLength: Constants.measurementLength)
 
         var rawHumidity = UInt32(rawData[1])
         rawHumidity <<= 8
@@ -60,35 +64,33 @@ final class AHT20Impl<T: I2CController>: AHT20 {
     }
 
     private func readStatus() throws(AHT20Error) -> AHT20Status {
-        let rawData = try readI2CData(length: Constants.statusLength)
+        let rawData = try readI2CData(writeData: [0x71], readLength: Constants.statusLength)
         return AHT20Status(rawValue: Int(rawData[0]))
     }
 
     private func waitForReadyStatus() throws(AHT20Error) {
         while(true) {
-            // TODO: add a delay or sleep.
+            // TODO: handle a maximum number of retries.
+            taskDelayController.delay(milliseconds: 10)
             if try isReady() {
                 break
             }
         }
     }
 
-    private func waitForCalibration() throws(AHT20Error) {
-        while(true) {
-            // TODO: add a delay or sleep.
-            let status = try readStatus()
-            if status.contains(.calibrated) {
-                break
-            }
+    private func verifyCalibration() throws(AHT20Error) {
+        let status = try readStatus()
+        if !status.contains(.calibrated) {
+            throw AHT20Error.calibrationFailed
         }
     }
 
-    private func readI2CData(length: Int) throws(AHT20Error) -> [UInt8] {
+    private func readI2CData(writeData: [UInt8] = [], readLength: Int) throws(AHT20Error) -> [UInt8] {
         do {
             return try i2CController.writeReadRawData(
-                [],
+                writeData,
                 deviceAddress: Constants.deviceAddress, 
-                length: length,
+                length: readLength,
                 timeout: 10
             )
         } catch (let error) {
@@ -118,12 +120,14 @@ fileprivate enum Constants {
 }
 
 fileprivate enum AHT20Command {
+    case initialize
     case softReset
     case calibrate
     case trigger
 
     var writeData: [UInt8] {
         switch self {
+            case .initialize: return [0xBE, 0x08, 0x00]
             case .softReset: return [0xBA]
             case .calibrate: return [0xE1, 0x08, 0x00]
             case .trigger: return [0xAC, 0x33, 0x00]
