@@ -5,7 +5,7 @@ var globalLuminosity: UInt32 = 0
 
 @_cdecl("app_main")
 func app_main() {
-  print("🏎️   Hello, Embedded Swift!")
+  print("🏎️   Hello, Embedded Swift Example!")
 
   let bleProfile = BLEProfile(
     services: [
@@ -45,7 +45,19 @@ func app_main() {
     try ltr390.setup()
     try ltr390.setupInALSMode()
   } catch (let error) {
-    print("Error \(error)")
+    print("LTR390 Setup error: \(error)")
+    return
+  }
+
+  let taskDelayController = ESP32TaskDelayController()
+  let aht20 = AHT20Impl(
+    i2CController: i2CController,
+    taskDelayController: taskDelayController
+  )
+  do {
+    try aht20.setup()
+  } catch (let error) {
+    print("AHT20 Setup error: \(error)")
     return
   }
 
@@ -68,18 +80,28 @@ func app_main() {
   while (true) {
     do {
       // try ltr390.setupInALSMode()
-      vTaskDelay(150)
-      // globalLuminosity = try ltr390.readRawLuminosity() 
+      
+      taskDelayController.delay(milliseconds: 1500)
+      
       let luminosity = try ltr390.readLuminosity()
       globalLuminosity = UInt32(luminosity)
       print("Luminosity: \(globalLuminosity)")
 
       // try ltr390.setupInUVMode()
       // vTaskDelay(150)
+      // taskDelayController.delay(milliseconds: 1500)
       // let uvIndex = try ltr390.readUVIndex()
       // print("UVIndex: \(Int(uvIndex))")
     } catch {
-      print("LTR390 Read Error: \(error)")
+      print("LTR390 Error")
+    }
+
+    do {
+      let aht20Data = try aht20.readData(polling: true)
+      print("Temperature: \(UInt32(aht20Data.temperature))")
+      print("Humidity: \(UInt32(aht20Data.humidity))")
+    } catch {
+      print("AHT20 Error")
     }
   }
 }

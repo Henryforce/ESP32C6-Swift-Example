@@ -14,9 +14,8 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <string.h>
-#include <stdlib.h>
-#include <string.h>
+// #include <string.h>
+// #include <stdlib.h>
 #include <inttypes.h>
 
 // ESP IDF
@@ -38,25 +37,13 @@
 #include <esp_bt_main.h>
 #include <esp_gatt_common_api.h>
 
+// Main Interface
+// ======================
+
+#include "../task_delay/TaskDelayController.h"
+
 // BLE Controller interface
 // ======================
 
 #include "../ble/ESP32BLEControllerInterface.h"
 
-// ESP Matter
-// ==========
-
-// #define CHIP_HAVE_CONFIG_H 1
-// #define CHIP_USE_ENUM_CLASS_FOR_IM_ENUM 1
-// #define CHIP_ADDRESS_RESOLVE_IMPL_INCLUDE_HEADER <lib/address_resolve/AddressResolve_DefaultImpl.h>
-
-// // There seems to be assumption in FabricTable.h that strnlen is implicitly available via some other headers, but that
-// // turns out to not be the case when importing these headers in Swift. Let's manually declare strnlen as a workaround.
-// //
-// // connectedhomeip/src/credentials/FabricTable.h:82:69: error: use of undeclared identifier 'strnlen'
-// extern "C" size_t strnlen(const char *s, size_t maxlen);
-
-// #include <esp_matter.h>
-// #include <esp_matter_cluster.h>
-// #include <app-common/zap-generated/ids/Clusters.h>
-// #include <app/server/Server.h>
