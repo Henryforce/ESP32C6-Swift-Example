@@ -49,14 +49,17 @@ struct BLEUUID: Equatable, Hashable {
         self.length = .thirtyTwoBits
     }
 
+    // Returns the two MSBs of the UUID.
     var uuid16: UInt16 {
-        return (UInt16(uuid[1]) << 8) | UInt16(uuid[0])
+        guard uuid.count >= 2 else { return 0 }
+        return (UInt16(uuid[0]) << 8) | UInt16(uuid[1])
     }
 
+    // Returns the four MSBs of the UUID.
     var uuid32: UInt32 {
-        var rawUUID: UInt32 = (UInt32(uuid[1]) << 8) | UInt32(uuid[0])
-        guard length == .thirtyTwoBits else { return rawUUID }
-        rawUUID |= (UInt32(uuid[3]) << 24) | (UInt32(uuid[2]) << 16)
+        guard uuid.count >= 4 else { return UInt32(uuid16) }
+        var rawUUID = (UInt32(uuid[0]) << 24) | (UInt32(uuid[1]) << 16)
+        rawUUID |= (UInt32(uuid[2]) << 8) | UInt32(uuid[3])
         return rawUUID
     }
 }

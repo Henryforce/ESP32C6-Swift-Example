@@ -78,5 +78,6 @@ target_sources(${COMPONENT_LIB}
     ../aht20/AHT20Impl.swift
     ../ble/ESPBLEServiceCharacteristic.swift
     ../ble/ESP32BLEController.swift
+    BLEMainCharacteristics.swift
     Main.swift
 ) 
