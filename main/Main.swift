@@ -1,7 +1,10 @@
 // Main.
 
 var bleController: ESP32BLEController?
-var globalLuminosity: UInt32 = 0
+var globalAmbientLight: UInt32 = 0
+var globalUVIndex: UInt32 = 0
+var globalTemperature: Int32 = 0
+var globalHumidity: UInt32 = 0
 
 @_cdecl("app_main")
 func app_main() {
@@ -10,19 +13,13 @@ func app_main() {
   let bleProfile = BLEProfile(
     services: [
       BLEService(
-        uuid: BLEUUID(uuid16: 0x00FF),
+        uuid: .weatherNode,
         primary: true,
         characteristics: [
-          BLECharacteristic(
-            uuid: BLEUUID(uuid16: 0xFF01),
-            dataLength: 4,
-            permissions: [.read, .write],
-            properties: [.read, .write, .notify],
-            description: BLECharacteristicDescription(
-              uuid: .clientConfiguration,
-              permissions: [.read, .write]
-            )
-          )
+          .ambientLight,
+          .uvIndex,
+          .temperature,
+          .humidity,
         ]
       )
     ]
@@ -61,14 +58,17 @@ func app_main() {
     return
   }
 
-  let readEventHandler: BLEReadEventHandler = {
-    let luminosity = globalLuminosity
-    return [
-        0,
-        UInt8((luminosity & 0xFF0000) >> 16),
-        UInt8((luminosity & 0xFF00) >> 8),
-        UInt8(luminosity & 0xFF),
-    ]
+  let readEventHandler: BLEReadEventHandler = { characteristic in
+    if characteristic.uuid == .ambientLight {
+      return globalAmbientLight.toUInt8Array()
+    } else if characteristic.uuid == .uvIndex {
+      return globalUVIndex.toUInt8Array()
+    } else if characteristic.uuid == .humidity {
+      return globalHumidity.toUInt8Array()
+    } else if characteristic.uuid == .temperature {
+      return globalTemperature.toUInt8Array()
+    }
+    return [0, 0, 0, 0]
   }
 
   // Start the BLE operation.  
@@ -79,27 +79,29 @@ func app_main() {
 
   while (true) {
     do {
-      // try ltr390.setupInALSMode()
+      try ltr390.setupInALSMode()
       
       taskDelayController.delay(milliseconds: 1500)
       
       let luminosity = try ltr390.readLuminosity()
-      globalLuminosity = UInt32(luminosity)
-      print("Luminosity: \(globalLuminosity)")
+      globalAmbientLight = UInt32(luminosity)
+      print("Luminosity: \(globalAmbientLight)")
 
-      // try ltr390.setupInUVMode()
-      // vTaskDelay(150)
-      // taskDelayController.delay(milliseconds: 1500)
-      // let uvIndex = try ltr390.readUVIndex()
-      // print("UVIndex: \(Int(uvIndex))")
+      try ltr390.setupInUVMode()
+      taskDelayController.delay(milliseconds: 1500)
+      let uvIndex = try ltr390.readUVIndex()
+      globalUVIndex = UInt32(uvIndex)
+      print("UVIndex: \(globalUVIndex)")
     } catch {
       print("LTR390 Error")
     }
 
     do {
       let aht20Data = try aht20.readData(polling: true)
-      print("Temperature: \(UInt32(aht20Data.temperature))")
-      print("Humidity: \(UInt32(aht20Data.humidity))")
+      globalTemperature = Int32(aht20Data.temperature)
+      globalHumidity = UInt32(aht20Data.humidity)
+      print("Temperature: \(globalTemperature)")
+      print("Humidity: \(globalHumidity)")
     } catch {
       print("AHT20 Error")
     }
@@ -126,7 +128,26 @@ extension LTR390 {
   }
 }
 
-extension BLEUUID {
-  /// The characteristic UUID used for the luminosity.
-  static let luminosity = BLEUUID(uuid16: 0x00FF)
+fileprivate extension UInt32 {
+  func toUInt8Array() -> [UInt8] {
+    let value = self
+    return [
+        UInt8(value >> 24),
+        UInt8((value & 0xFF0000) >> 16),
+        UInt8((value & 0xFF00) >> 8),
+        UInt8(value & 0xFF),
+    ]
+  }
+}
+
+fileprivate extension Int32 {
+  func toUInt8Array() -> [UInt8] {
+    let value = self
+    return [
+        UInt8(value >> 24),
+        UInt8((value & 0xFF0000) >> 16),
+        UInt8((value & 0xFF00) >> 8),
+        UInt8(value & 0xFF),
+    ]
+  }
 }

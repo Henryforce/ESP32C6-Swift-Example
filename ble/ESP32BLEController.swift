@@ -1,6 +1,5 @@
 
-// TODO: update to pass the characteristic UUID
-typealias BLEReadEventHandler = () -> [UInt8]
+typealias BLEReadEventHandler = (BLECharacteristic) -> [UInt8]
 
 final class ESP32BLEController {
 
@@ -239,16 +238,6 @@ final class ESP32BLEController {
             return
         }
 
-        // TODO: update to potentially add more services.
-        let service = profile.services[0]
-        var serviceID = esp_gatt_srvc_id_t(
-            id: esp_gatt_id_t(
-                uuid: service.uuid.esp32UUID,
-                inst_id: 0x00
-            ),
-            is_primary: service.primary
-        )
-
         // TODO: handle error.
         var error = safe_swift_esp_ble_gap_set_device_name()
         printErrorIfNeeded(error, title: "set device name ERROR")
@@ -265,23 +254,46 @@ final class ESP32BLEController {
         printErrorIfNeeded(error, title: "esp_ble_gap_config_adv_data 2 error")
         advertisementState |= 2
 
-        withUnsafeMutablePointer(to: &serviceID) { pointer in
-            // TODO: replace the 4 with a dynamically calculated value based on the profile.
-            error = esp_ble_gatts_create_service(gattsIF, pointer, 4)
+        for service in profile.services {
+            var serviceID = esp_gatt_srvc_id_t(
+                id: esp_gatt_id_t(
+                    uuid: service.uuid.esp32UUID,
+                    inst_id: 0x00
+                ),
+                is_primary: service.primary
+            )
+
+            let requestedHandles = UInt16(2 + 2 * service.characteristics.count)
+            withUnsafeMutablePointer(to: &serviceID) { pointer in
+                error = esp_ble_gatts_create_service(gattsIF, pointer, requestedHandles)
+            }
+            printErrorIfNeeded(error, title: "esp_ble_gatts_create_service error")
         }
-        printErrorIfNeeded(error, title: "esp_ble_gatts_create_service error")
     }
 
     private func handleReadEvent(gattsIF: esp_gatt_if_t, param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
         let readEvent = read_read_evt_param(param)
         print("Read event \(readEvent.conn_id), handle: \(readEvent.handle)")
 
-        if let index = characteristicHandleMap[readEvent.handle] {
-            print("Reading service \(index.serviceIndex), characteristic \(index.characteristicIndex)")
+        guard let index = characteristicHandleMap[readEvent.handle] else {
+            print("Trying to read non-registered handle: \(readEvent.handle)")
+
+            // Send an empty response as the handle is not registered...
+            var responseValue = safe_build_esp_gatt_value_t()
+            responseValue.handle = readEvent.handle
+            responseValue.len = 4
+            var response = esp_gatt_rsp_t(attr_value: responseValue)
+            esp_ble_gatts_send_response(gattsIF, readEvent.conn_id, readEvent.trans_id, ESP_GATT_OK, &response)
+            return
         }
+
+        let serviceIndex = Int(index.serviceIndex)
+        let characteristicIndex = Int(index.characteristicIndex)
+        print("Reading service \(serviceIndex), characteristic \(characteristicIndex)")
         
+        let characteristic = profile.services[serviceIndex].characteristics[characteristicIndex]
         // Request the data to be passed when a characteristic is being read.
-        let rawData = readEventHandler()
+        let rawData = readEventHandler(characteristic)
         let rawDataLength = rawData.count
 
         var responseValue = safe_build_esp_gatt_value_t()
@@ -289,8 +301,8 @@ final class ESP32BLEController {
         responseValue.len = 4
         
         if rawDataLength == 4 {
-            for index in 0..<rawDataLength {
-                update_gatt_value(&responseValue, rawData[index], UInt16(index))
+            for localIndex in 0..<rawDataLength {
+                update_gatt_value(&responseValue, rawData[localIndex], UInt16(localIndex))
             }
         }
 
@@ -332,24 +344,25 @@ final class ESP32BLEController {
 
         esp_ble_gatts_start_service(createEvent.service_handle)
 
-        let characteristic = profile.services[0].characteristics[0]
-        var charUUID = characteristic.uuid.esp32UUID
+        let characteristics = profile.services[Int(serviceIndex)].characteristics
+        for characteristic in characteristics {
+            var charUUID = characteristic.uuid.esp32UUID
 
-        var error = ESP_OK
-        withUnsafeMutablePointer(to: &charUUID) { charUUIDPointer in
-            withUnsafeMutablePointer(to: &characteristicAttributeValue) { characteristicAttributeValuePointer in
-                error = esp_ble_gatts_add_char(
-                    // profile.serviceHandle,
-                    createEvent.service_handle,
-                    charUUIDPointer,
-                    characteristic.permissions.esp32Permissions,
-                    characteristic.properties.esp32Properties,
-                    characteristicAttributeValuePointer,
-                    nil
-                )
+            var error = ESP_OK
+            withUnsafeMutablePointer(to: &charUUID) { charUUIDPointer in
+                withUnsafeMutablePointer(to: &characteristicAttributeValue) { characteristicAttributeValuePointer in
+                    error = esp_ble_gatts_add_char(
+                        createEvent.service_handle,
+                        charUUIDPointer,
+                        characteristic.permissions.esp32Permissions,
+                        characteristic.properties.esp32Properties,
+                        characteristicAttributeValuePointer,
+                        nil
+                    )
+                }
             }
+            printErrorIfNeeded(error, title: "esp_ble_gatts_start_service error")
         }
-        printErrorIfNeeded(error, title: "esp_ble_gatts_start_service error")
     }
 
     private func handleAddCharEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
