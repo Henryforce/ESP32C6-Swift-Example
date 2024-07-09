@@ -58,7 +58,6 @@
 		391544C52C3A1FE9000AD198 /* ESP32C6Example */ = {
 			isa = PBXGroup;
 			children = (
-				391544DC2C3A3600000AD198 /* BLE */,
 				391544C62C3A1FE9000AD198 /* AppDelegate.swift */,
 				391544C82C3A1FE9000AD198 /* SceneDelegate.swift */,
 				391544CA2C3A1FE9000AD198 /* ViewController.swift */,
@@ -68,13 +67,6 @@
 				391544D42C3A1FEA000AD198 /* Info.plist */,
 			);
 			path = ESP32C6Example;
-			sourceTree = "<group>";
-		};
-		391544DC2C3A3600000AD198 /* BLE */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BLE;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

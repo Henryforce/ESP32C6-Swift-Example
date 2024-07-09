@@ -22,13 +22,32 @@ final class ViewController: UIViewController {
     
     centralManager = BLECombineKit.buildCentralManager(with: CBCentralManager())
     
+    // TODO: enable in future commits, but make sure to connect and disconnect.
+    // setupButton()
+    
     DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) {
-      self.checkDevices()
+      self.readData()
     }
   }
   
-  private func checkDevices() {
+  private func setupButton() {
+    let action = UIAction(title:"Read data", handler: { [weak self] _ in
+      self?.readData()
+    })
+    let button = UIButton(primaryAction: action)
+    button.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(button)
+    
+    NSLayoutConstraint.activate([
+      button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      button.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+    ])
+  }
+  
+  // TODO: disconnect after reading all data.
+  private func readData() {
     guard let centralManager else { return }
+    
     let serviceUUID = CBUUID(string: "0x00FF")
     let mainStream = centralManager.scanForPeripherals(
       withServices: [serviceUUID],
@@ -41,51 +60,39 @@ final class ViewController: UIViewController {
       .flatMap { $0.discoverServices(serviceUUIDs: [serviceUUID]) }
       .flatMap { $0.discoverCharacteristics(characteristicUUIDs: nil) }
       .share()
+      .eraseToAnyPublisher()
     
-    characteristicsStream
-      .filter { $0.value.uuid == CBUUID(string: "0xFF01") }
-      .flatMap { $0.observeValue() }
-      .sink(receiveCompletion: { completion in
-        print(completion)
-      }, receiveValue: { data in
-        print("Ambient light: \(data.uintValue?.correctBytes ?? 0)")
-      })
-      .store(in: &disposables)
+    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF01", name: "Ambient Light")
+    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF02", name: "UV Index")
+    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF03", name: "Temperature")
+    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF04", name: "Humidity")
+  }
+  
+  private func observeCharacteristic(
+    for stream: AnyPublisher<BLECharacteristic, BLEError>,
+    uuidString: String,
+    name: String
+  ) {
+    // Create an AsyncThrowingPublisher from a Publisher stream which can then
+    // be awaited in a Task.
+    let asyncStream = stream
+        .filter { $0.value.uuid == CBUUID(string: uuidString) }
+        .flatMap { $0.observeValue() }
+        .first()
+        .values
     
-    characteristicsStream
-      .filter { $0.value.uuid == CBUUID(string: "0xFF02") }
-      .flatMap { $0.observeValue() }
-      .sink(receiveCompletion: { completion in
-        print(completion)
-      }, receiveValue: { data in
-        print("UV Index: \(data.uintValue?.correctBytes ?? 0)")
-      })
-      .store(in: &disposables)
-    
-    characteristicsStream
-      .filter { $0.value.uuid == CBUUID(string: "0xFF03") }
-      .flatMap { $0.observeValue() }
-      .sink(receiveCompletion: { completion in
-        print(completion)
-      }, receiveValue: { data in
-        print("Temperature: \(data.uintValue?.correctBytes ?? 0)")
-      })
-      .store(in: &disposables)
-    
-    characteristicsStream
-      .filter { $0.value.uuid == CBUUID(string: "0xFF04") }
-      .flatMap { $0.observeValue() }
-      .sink(receiveCompletion: { completion in
-        print(completion)
-      }, receiveValue: { data in
-        print("Humidity: \(data.uintValue?.correctBytes ?? 0)")
-      })
-      .store(in: &disposables)
+    Task {
+      for try await data in asyncStream {
+        print("\(name): \(data.uintValue?.correctBytes ?? 0)")
+      }
+      print("Finished reading \(name)")
+    }
   }
   
 }
 
 extension UInt32 {
+  // TODO: modify the firmware side to send this data properly.
   var correctBytes: UInt32 {
     var value: UInt32 = 0
     value |= (self & 0xFF000000) >> 24
