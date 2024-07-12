@@ -23,7 +23,6 @@ final class ESP32BLEController {
         let characteristicIndex: UInt8
     }
 
-    // private var profile: GattsProfile
     private var adv_data: esp_ble_adv_data_t
     private var scan_rsp_data: esp_ble_adv_data_t
     private var adv_service_uuid128: [UInt8] = [
@@ -38,13 +37,14 @@ final class ESP32BLEController {
     private var advertisementParameters: esp_ble_adv_params_t
     private var advertisementState: UInt8 = 0
 
+    /// Main profile for this controller.
     private let profile: BLEProfile
     private let readEventHandler: BLEReadEventHandler
 
-    // Dictionary that maps an attribute handle to the service index (in the profile).
+    /// Dictionary that maps an attribute handle to the service index (in the profile).
     private var serviceHandleMap = [UInt16: UInt8]()
 
-    // Dictionary that maps an attribute handle to the service and characteristics indexes (in the profile).
+    /// Dictionary that maps an attribute handle to the service and characteristics indexes (in the profile).
     private var characteristicHandleMap = [UInt16: BLEServiceCharacteristicIndex]()
 
     init(
@@ -457,7 +457,7 @@ final class ESP32BLEController {
 
 }
 
-extension BLECharacteristicPermissions {
+fileprivate extension BLECharacteristicPermissions {
     var esp32Permissions: UInt16 {
         var value: UInt16 = 0
         if contains(.read) {
@@ -470,7 +470,7 @@ extension BLECharacteristicPermissions {
     }
 }
 
-extension BLECharacteristicProperties {
+fileprivate extension BLECharacteristicProperties {
     var esp32Properties: UInt8 {
         var value: UInt8 = 0
         if contains(.read) {
@@ -486,7 +486,7 @@ extension BLECharacteristicProperties {
     }
 }
 
-extension BLEUUID {
+fileprivate extension BLEUUID {
     var esp32UUID: esp_bt_uuid_t {
         switch length {
             case .sixteenBits:
