@@ -1,10 +1,27 @@
+#include <esp_bt.h>
 
+#include <esp_gap_ble_api.h>
+#include <esp_gatts_api.h>
+#include <esp_bt_defs.h>
+#include <esp_bt_main.h>
+#include <esp_gatt_common_api.h>
+
+// Returns the default BT Controller configuration.
+//
+// This method works as a Swift wrapper to BT_CONTROLLER_INIT_CONFIG_DEFAULT as it is a macro
+// and function macros are not imported by Swift.
 esp_bt_controller_config_t buildDefaultBTControllerConfiguration();
 
+// TODO: update with the option to pass a string, add proper comment.
 esp_err_t safe_swift_esp_ble_gap_set_device_name();
 
+// TODO: update name, add proper comment.
 esp_err_t swift_temp_esp_ble_gatts_get_attr_value(uint16_t attr_handle);
 
+// Builds and returns a esp_ble_adv_params_t struct given the input parameters.
+// 
+// This method is a helpful wrapper for Swift, as Swift has issues with the constructor of
+// esp_ble_adv_params_t.
 esp_ble_adv_params_t adv_params_wo_peer_address(
     uint16_t adv_int_min, 
     uint16_t adv_int_max, 
@@ -14,8 +31,14 @@ esp_ble_adv_params_t adv_params_wo_peer_address(
     esp_ble_adv_filter_t adv_filter_policy
 );
 
+// TODO: update name, add proper comment.
 esp_gatt_value_t safe_build_esp_gatt_value_t();
 
+// Updates the value in the index for a given esp_gatt_value_t.
+//
+// This method is a convenient wrapper for quickly updating the esp_gatt_value_t array values
+// in Swift. This method does not check if the given index is valid, so special care must be
+// taken before calling this method.
 void update_gatt_value(esp_gatt_value_t *gatt_value, uint8_t value, uint16_t index);
 
 /*
@@ -27,7 +50,6 @@ esp_ble_gap_cb_param_t::ble_adv_start_cmpl_evt_param read_ble_adv_start_cmpl_evt
 esp_ble_gap_cb_param_t::ble_adv_stop_cmpl_evt_param read_ble_adv_stop_cmpl_evt_param(esp_ble_gap_cb_param_t *param);
 
 esp_ble_gap_cb_param_t::ble_update_conn_params_evt_param read_ble_update_conn_params_evt_param(esp_ble_gap_cb_param_t *param);
-
 
 /*
     GATTS

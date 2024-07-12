@@ -2,7 +2,6 @@
 idf_component_register(
     # SRCS /dev/null # We don't have any C++ sources
     SRCS "../task_delay/TaskDelayController.cpp"
-    SRCS "../ble/ESP32BLEControllerInterface.cpp"
     PRIV_INCLUDE_DIRS "."
 )
 
@@ -64,6 +63,13 @@ set(CMAKE_Swift_COMPILATION_MODE_DEFAULT wholemodule)
 set(CMAKE_Swift_COMPILATION_MODE wholemodule)
 enable_language(Swift)
 
+# Compile the BLE component as a private target.
+target_sources(${COMPONENT_LIB}
+    PRIVATE
+    ../components/ble/ESP32BLEController.swift
+    ../components/ble/ESPBLEServiceCharacteristic.swift
+)
+
 # List of Swift source files to build.
 target_sources(${COMPONENT_LIB}
     PRIVATE
@@ -76,8 +82,6 @@ target_sources(${COMPONENT_LIB}
     ../task_delay/ESP32TaskDelayController.swift
     ../aht20/AHT20.swift
     ../aht20/AHT20Impl.swift
-    ../ble/ESPBLEServiceCharacteristic.swift
-    ../ble/ESP32BLEController.swift
     BLEMainCharacteristics.swift
     Main.swift
 ) 

@@ -45,5 +45,4 @@
 // BLE Controller interface
 // ======================
 
-#include "../ble/ESP32BLEControllerInterface.h"
-
+#include "../components/ble/ESP32BLEControllerInterface.h"
