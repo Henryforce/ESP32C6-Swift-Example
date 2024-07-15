@@ -26,40 +26,50 @@ struct BLEUUID: Equatable, Hashable {
     enum BLEUUIDSize: Equatable, Hashable {
         case sixteenBits
         case thirtyTwoBits
+
+        var rawLength: UInt16 {
+            switch self {
+                case .sixteenBits: UInt16(ESP_UUID_LEN_16)
+                case .thirtyTwoBits: UInt16(ESP_UUID_LEN_32)
+            }
+        }
     }
 
+    /// UUID stored as bytes ordered from LSB to MSB.
     let uuid: [UInt8]
     let length: BLEUUIDSize
 
     init(uuid16: UInt16) {
+        // Bytes need to be stored from LSB to MSB.
         self.uuid = [
-            UInt8((uuid16 & 0xFF00) >> 8),
             UInt8(uuid16 & 0xFF),
+            UInt8((uuid16 & 0xFF00) >> 8),
         ]
         self.length = .sixteenBits
     }
 
     init(uuid32: UInt32) {
+        // Bytes need to be stored from LSB to MSB.
         self.uuid = [
-            UInt8((uuid32 & 0xFF000000) >> 24),
-            UInt8((uuid32 & 0xFF0000) >> 16),
+            UInt8(uuid32 & 0xFF),       
             UInt8((uuid32 & 0xFF00) >> 8),
-            UInt8(uuid32 & 0xFF),        
+            UInt8((uuid32 & 0xFF0000) >> 16), 
+            UInt8((uuid32 & 0xFF000000) >> 24),
         ]
         self.length = .thirtyTwoBits
     }
 
-    // Returns the two MSBs of the UUID.
+    /// Returns the two LSBs of the UUID.
     var uuid16: UInt16 {
         guard uuid.count >= 2 else { return 0 }
-        return (UInt16(uuid[0]) << 8) | UInt16(uuid[1])
+        return (UInt16(uuid[1]) << 8) | UInt16(uuid[0])
     }
 
-    // Returns the four MSBs of the UUID.
+    /// Returns the four LSBs of the UUID.
     var uuid32: UInt32 {
         guard uuid.count >= 4 else { return UInt32(uuid16) }
-        var rawUUID = (UInt32(uuid[0]) << 24) | (UInt32(uuid[1]) << 16)
-        rawUUID |= (UInt32(uuid[2]) << 8) | UInt32(uuid[3])
+        var rawUUID = (UInt32(uuid[3]) << 24) | (UInt32(uuid[2]) << 16)
+        rawUUID |= (UInt32(uuid[1]) << 8) | UInt32(uuid[0])
         return rawUUID
     }
 }

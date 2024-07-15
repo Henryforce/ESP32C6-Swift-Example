@@ -66,7 +66,8 @@ enable_language(Swift)
 # Compile the BLE component as a private target.
 target_sources(${COMPONENT_LIB}
     PRIVATE
-    ../components/ble/ESP32BLEController.swift
+    # ../components/ble/ESP32BLEController.swift
+    ../components/ble/ESP32BLEGattServer.swift
     ../components/ble/ESPBLEServiceCharacteristic.swift
 )
 
