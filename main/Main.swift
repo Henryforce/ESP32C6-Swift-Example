@@ -1,6 +1,6 @@
 // Main.
 
-var bleController: ESP32BLEController?
+var bleController: ESP32BLEGattServer?
 var globalAmbientLight: UInt32 = 0
 var globalUVIndex: UInt32 = 0
 var globalTemperature: Int32 = 0
@@ -58,24 +58,21 @@ func app_main() {
     return
   }
 
-  let readEventHandler: BLEReadEventHandler = { characteristic in
-    if characteristic.uuid == .ambientLight {
-      return globalAmbientLight.toUInt8Array()
-    } else if characteristic.uuid == .uvIndex {
-      return globalUVIndex.toUInt8Array()
-    } else if characteristic.uuid == .humidity {
-      return globalHumidity.toUInt8Array()
-    } else if characteristic.uuid == .temperature {
-      return globalTemperature.toUInt8Array()
-    }
-    return [0, 0, 0, 0]
-  }
+  // let readEventHandler: BLEReadEventHandler = { characteristic in
+  //   if characteristic.uuid == .ambientLight {
+  //     return globalAmbientLight.toUInt8Array()
+  //   } else if characteristic.uuid == .uvIndex {
+  //     return globalUVIndex.toUInt8Array()
+  //   } else if characteristic.uuid == .humidity {
+  //     return globalHumidity.toUInt8Array()
+  //   } else if characteristic.uuid == .temperature {
+  //     return globalTemperature.toUInt8Array()
+  //   }
+  //   return [0, 0, 0, 0]
+  // }
 
   // Start the BLE operation.  
-  bleController = ESP32BLEController(
-    profile: bleProfile,
-    readEventHandler: readEventHandler
-  )
+  bleController = ESP32BLEGattServer(profile: bleProfile)
 
   while (true) {
     do {
@@ -104,6 +101,13 @@ func app_main() {
       print("Humidity: \(globalHumidity)")
     } catch {
       print("AHT20 Error")
+    }
+
+    if let bleController {
+      bleController.updateValue(globalAmbientLight.toUInt8Array(), for: .ambientLight, at: .weatherNode)
+      bleController.updateValue(globalUVIndex.toUInt8Array(), for: .uvIndex, at: .weatherNode)
+      bleController.updateValue(globalTemperature.toUInt8Array(), for: .temperature, at: .weatherNode)
+      bleController.updateValue(globalHumidity.toUInt8Array(), for: .humidity, at: .weatherNode)
     }
   }
 }
