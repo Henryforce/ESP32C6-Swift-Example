@@ -56,6 +56,9 @@ final class ViewController: UIViewController {
     
     let characteristicsStream = mainStream
       .first()
+      .handleEvents(receiveOutput: { _ in
+        centralManager.stopScan()
+      })
       .flatMap { $0.peripheral.connect(with: nil) }
       .flatMap { $0.discoverServices(serviceUUIDs: [serviceUUID]) }
       .flatMap { $0.discoverCharacteristics(characteristicUUIDs: nil) }
@@ -74,11 +77,12 @@ final class ViewController: UIViewController {
     name: String
   ) {
     // Create an AsyncThrowingPublisher from a Publisher stream which can then
-    // be awaited in a Task.
+    // be awaited in a Task. Add a delay at the end of the stream to avoid generating many
+    // requests, as each request will internally trigger a new read event.
     let asyncStream = stream
         .filter { $0.value.uuid == CBUUID(string: uuidString) }
         .flatMap { $0.observeValue() }
-        .first()
+        .delay(for: .seconds(1), scheduler: RunLoop.main)
         .values
     
     Task {
