@@ -33,6 +33,8 @@ final class ESP32BLEGattServer {
     private var characteristicValue:[UInt8] = [0x11, 0x22, 0x33]
     private var advertisementParameters: esp_ble_adv_params_t
     private var advertisementState: UInt8 = 0
+    private var mainGattsIF: esp_gatt_if_t = 0
+    private var connectionID: UInt16 = 0
 
     /// Main profile for this controller.
     private let profile: BLEProfile
@@ -145,14 +147,14 @@ final class ESP32BLEGattServer {
         for service in profile.services {
             index += 1
             guard service.uuid == serviceUUID else {
-                // TODO: consider descriptor count.
-                index += service.characteristics.count * 2
+                // TODO: properly consider descriptor count, it might or not be set.
+                index += service.characteristics.count * 3
                 continue
             }
             for characteristic in service.characteristics {
                 guard characteristic.uuid == characteristicUUID else {
-                    // TODO: consider descriptor count
-                    index += 2
+                    // TODO: properly consider descriptor count, it might or not be set.
+                    index += 3
                     continue
                 }
                 guard index + 1 < handles.count else { return } 
@@ -163,9 +165,22 @@ final class ESP32BLEGattServer {
                 let dataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: length)
                 dataPointer.initialize(from: &data, count: length)
 
-                let error = esp_ble_gatts_set_attr_value(validHandle, UInt16(length), dataPointer)
+                var error = esp_ble_gatts_set_attr_value(validHandle, UInt16(length), dataPointer)
                 printErrorIfNeeded(error, title: "esp_ble_gatts_set_attr_value error")
-                // print("Finished updating \(validHandle)")
+
+                // TODO: keep track of this via a local variable.
+                guard mainGattsIF > 0 else { return }
+                let needConfirmation = false // false for notification, true for indication
+                error = esp_ble_gatts_send_indicate(
+                    mainGattsIF, 
+                    connectionID, 
+                    validHandle, 
+                    UInt16(length), 
+                    dataPointer, 
+                    needConfirmation
+                )
+                printErrorIfNeeded(error, title: "esp_ble_gatts_send_indicate error")
+
                 return
             }
             return
@@ -237,6 +252,8 @@ final class ESP32BLEGattServer {
             case ESP_GATTS_READ_EVT:
                 handleReadEvent(gattsIF: gattsIF, param: param)
             case ESP_GATTS_WRITE_EVT:
+                handleWriteEvent(gattsIF: gattsIF, param: param)
+            case ESP_GATTS_EXEC_WRITE_EVT:
                 handleExecWriteEvent(gattsIF: gattsIF, param: param)
             case ESP_GATTS_MTU_EVT:
                 handleMTUEvent(param: param)
@@ -248,6 +265,8 @@ final class ESP32BLEGattServer {
                 handleDisconnectEvent(param: param)
             case ESP_GATTS_CREAT_ATTR_TAB_EVT:
                 handleCreateAttributeTableEvent(param: param)
+            case ESP_GATTS_CONF_EVT:
+                handleConfEvent(param: param)
             default: break
         }
     }
@@ -289,15 +308,49 @@ final class ESP32BLEGattServer {
         print("Read event \(readEvent.conn_id), handle: \(readEvent.handle)")
     }
 
-    private func handleWriteEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
+    private func handleWriteEvent(gattsIF: esp_gatt_if_t, param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
         let writeEvent = read_write_evt_param(param)
-        print("Write event")
+        print("Write event. Handle: \(writeEvent.handle). Length: \(writeEvent.len). ConnectionID: \(writeEvent.conn_id)")
+
+        if !writeEvent.is_prep {
+            if writeEvent.len == 2 {
+                let descriptorValue = UInt16(writeEvent.value[1] << 8) | UInt16(writeEvent.value[0])
+                if descriptorValue == 0x0001 {
+                    print("Notify enabled on handle: \(writeEvent.handle)")
+
+                    var index = 0
+                    for service in profile.services {
+                        index += 1
+                        for characteristic in service.characteristics { 
+                            index += 3
+
+                            let cccdHandle = handles[index - 1]
+                            var cccdData: [UInt8] = [1, 0]
+                            let cccdDataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: 2)
+                            cccdDataPointer.initialize(from: &cccdData, count: 2)
+                            var error = esp_ble_gatts_set_attr_value(cccdHandle, 2, cccdDataPointer)
+                            printErrorIfNeeded(error, title: "esp_ble_gatts_set_attr_value error")
+                        }
+                    }
+
+                    mainGattsIF = gattsIF
+                } else if descriptorValue == 0x0001 {
+                    print("Indicate enabled")
+                }
+            }
+        }
+
+        if writeEvent.need_rsp {
+            var error = esp_ble_gatts_send_response(gattsIF, writeEvent.conn_id, writeEvent.trans_id, ESP_GATT_OK, nil)
+            printErrorIfNeeded(error, title: "esp_ble_gatts_send_response error")
+        }
     }
 
     private func handleExecWriteEvent(gattsIF: esp_gatt_if_t, param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
         print("GATTS EXEC WRITE Event")
-        let writeEvent = read_write_evt_param(param)
-        esp_ble_gatts_send_response(gattsIF, writeEvent.conn_id, writeEvent.trans_id, ESP_GATT_OK, nil)
+        // TODO: update
+        // let writeEvent = read_write_evt_param(param)
+        // esp_ble_gatts_send_response(gattsIF, writeEvent.conn_id, writeEvent.trans_id, ESP_GATT_OK, nil)
     }
 
     private func handleMTUEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
@@ -320,6 +373,7 @@ final class ESP32BLEGattServer {
             timeout: 400
         )
         esp_ble_gap_update_conn_params(&connectionParameters)
+        connectionID = connectionEvent.conn_id
     }
 
     private func handleDisconnectEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
@@ -431,6 +485,7 @@ fileprivate extension BLEService {
         for characteristic in characteristics {
             elements.append(characteristic.databaseElementDeclaration)
             elements.append(characteristic.databaseElementValue)
+            elements.append(characteristic.description.databaseElementDescriptor)
         }
 
         return elements
@@ -511,6 +566,33 @@ fileprivate extension BLECharacteristic {
             perm: UInt16(permissions.esp32Permissions),
             max_length: 500, // TODO: check about this max value.
             length: dataLength,
+            value: valueUnsafePointer
+        )
+
+        return esp_gatts_attr_db_t(attr_control: control, att_desc: description)
+    }
+}
+
+fileprivate extension BLECharacteristicDescription {
+    var databaseElementDescriptor: esp_gatts_attr_db_t {
+        let control = esp_attr_control_t(auto_rsp: UInt8(ESP_GATT_AUTO_RSP))
+        
+        // Bytes need to be stored from LSB to MSB.
+        var uuidBytes = uuid.uuid
+        let uuidBytesCount = uuidBytes.count
+        let uuidUnsafePointer = UnsafeMutablePointer<UInt8>.allocate(capacity: uuidBytesCount)
+        uuidUnsafePointer.initialize(from: &uuidBytes, count: uuidBytesCount)
+
+        var valueBytes: [UInt8] = [0, 0]
+        let valueUnsafePointer = UnsafeMutablePointer<UInt8>.allocate(capacity: 2)
+        valueUnsafePointer.initialize(from: &valueBytes, count: 2)
+
+        let description = esp_attr_desc_t(
+            uuid_length: UInt16(uuidBytesCount),
+            uuid_p: uuidUnsafePointer,
+            perm: UInt16(permissions.esp32Permissions),
+            max_length: 2,
+            length: 2,
             value: valueUnsafePointer
         )
 
