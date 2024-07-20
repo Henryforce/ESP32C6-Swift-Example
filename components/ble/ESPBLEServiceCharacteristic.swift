@@ -13,30 +13,36 @@ struct BLECharacteristic {
     let dataLength: UInt16
     let permissions: BLECharacteristicPermissions
     let properties: BLECharacteristicProperties
-    let description: BLECharacteristicDescription
+    let descriptor: BLECharacteristicDescriptor?
 }
 
-struct BLECharacteristicDescription {
+struct BLECharacteristicDescriptor {
     let uuid: BLEUUID
     let permissions: BLECharacteristicPermissions
 }
 
 // TODO: add support for 128 bits UUID.
-struct BLEUUID: Equatable, Hashable {
-    enum BLEUUIDSize: Equatable, Hashable {
+struct BLEUUID: Equatable {
+    enum BLEUUIDSize: Equatable {
         case sixteenBits
         case thirtyTwoBits
+        // case oneHundredTwentyEightBits
 
         var rawLength: UInt16 {
             switch self {
                 case .sixteenBits: UInt16(ESP_UUID_LEN_16)
                 case .thirtyTwoBits: UInt16(ESP_UUID_LEN_32)
+                // case .oneHundredTwentyEightBits: UInt16(ESP_UUID_LEN_128)
             }
         }
     }
 
     /// UUID stored as bytes ordered from LSB to MSB.
     let uuid: [UInt8]
+    // let lowUUID: UInt32
+    // let lowMiddleUUID: UInt32
+    // let upperMiddleUUID: UInt32
+    // let upperUUID: UInt32
     let length: BLEUUIDSize
 
     init(uuid16: UInt16) {
@@ -45,6 +51,10 @@ struct BLEUUID: Equatable, Hashable {
             UInt8(uuid16 & 0xFF),
             UInt8((uuid16 & 0xFF00) >> 8),
         ]
+        // self.lowUUID = UInt32(uuid16)
+        // self.lowMiddleUUID = 0
+        // self.upperMiddleUUID = 0
+        // self.upperUUID = 0
         self.length = .sixteenBits
     }
 
@@ -56,13 +66,31 @@ struct BLEUUID: Equatable, Hashable {
             UInt8((uuid32 & 0xFF0000) >> 16), 
             UInt8((uuid32 & 0xFF000000) >> 24),
         ]
+        // self.lowUUID = uuid32
+        // self.lowMiddleUUID = 0
+        // self.upperMiddleUUID = 0
+        // self.upperUUID = 0
         self.length = .thirtyTwoBits
     }
+
+    // init(
+    //     lowUUID: UInt32,
+    //     lowMiddleUUID: UInt32,
+    //     upperMiddleUUID: UInt32,
+    //     upperUUID: UInt32
+    // ) {
+    //     self.lowUUID = lowUUID
+    //     self.lowMiddleUUID = lowMiddleUUID
+    //     self.upperMiddleUUID = upperMiddleUUID
+    //     self.upperUUID = upperUUID
+    //     self.length = .oneHundredTwentyEightBits
+    // }
 
     /// Returns the two LSBs of the UUID.
     var uuid16: UInt16 {
         guard uuid.count >= 2 else { return 0 }
         return (UInt16(uuid[1]) << 8) | UInt16(uuid[0])
+        // return UInt16(lowUUID)
     }
 
     /// Returns the four LSBs of the UUID.
@@ -71,7 +99,22 @@ struct BLEUUID: Equatable, Hashable {
         var rawUUID = (UInt32(uuid[3]) << 24) | (UInt32(uuid[2]) << 16)
         rawUUID |= (UInt32(uuid[1]) << 8) | UInt32(uuid[0])
         return rawUUID
+        // return lowUUID
     }
+
+    // var bytes: [UInt8] {
+    //     switch length {
+    //         case .sixteenBits:
+    //             return [
+    //                 UInt8(lowUUID),
+    //                 UInt8((lowUUID & 0xFF00) >> 8),
+    //             ]
+    //         case .thirtyTwoBits:
+    //             return lowUUID.bytesArray
+    //         case .oneHundredTwentyEightBits:
+    //             return lowUUID.bytesArray + lowMiddleUUID.bytesArray + upperMiddleUUID.bytesArray + upperUUID.bytesArray
+    //     }
+    // }
 }
 
 struct BLECharacteristicPermissions: OptionSet {
@@ -88,3 +131,14 @@ struct BLECharacteristicProperties: OptionSet {
     static let write = BLECharacteristicProperties(rawValue: 1 << 1)
     static let notify = BLECharacteristicProperties(rawValue: 1 << 2)
 }
+
+// fileprivate extension UInt32 {
+//     var bytesArray: [UInt8] {
+//         [
+//             UInt8(self & 0xFF),       
+//             UInt8((self & 0xFF00) >> 8),
+//             UInt8((self & 0xFF0000) >> 16), 
+//             UInt8((self & 0xFF000000) >> 24),
+//         ]
+//     }
+// }

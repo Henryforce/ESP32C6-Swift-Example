@@ -8,10 +8,27 @@ esp_err_t safe_swift_esp_ble_gap_set_device_name() {
     return esp_ble_gap_set_device_name("ESP_GATTS_DEMO");
 }
 
-esp_err_t swift_temp_esp_ble_gatts_get_attr_value(uint16_t attr_handle) {
+esp_gatt_status_t swift_esp_ble_gatts_get_attr_value(
+    uint16_t attr_handle,
+    uint16_t expected_length,
+    uint8_t *expected_value_buffer
+) {
+    if (expected_length == 0) {
+        return ESP_GATT_OUT_OF_RANGE;
+    }
     uint16_t length = 0;
     const uint8_t *prf_char;
-    return esp_ble_gatts_get_attr_value(attr_handle, &length, &prf_char);
+    esp_gatt_status_t status = esp_ble_gatts_get_attr_value(attr_handle, &length, &prf_char);
+    if (status != ESP_GATT_OK) {
+        return status;
+    }
+    if (length == 0 || length != expected_length) {
+        return ESP_GATT_OUT_OF_RANGE;
+    }
+    for (int index = 0; index < length; index++) {
+        expected_value_buffer[index] = prf_char[index];
+    }
+    return status;
 }
 
 esp_ble_adv_params_t adv_params_wo_peer_address(

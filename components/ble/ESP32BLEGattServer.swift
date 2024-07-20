@@ -15,9 +15,15 @@ final class ESP32BLEGattServer {
         init() { }
     }
 
-    private struct BLEServiceCharacteristicIndex {
-        let serviceIndex: UInt8
-        let characteristicIndex: UInt8
+    private struct CharacteristicHandle {
+        let valueHandle: Int
+        let descriptorHandle: Int?
+    }
+
+    private enum BLEDescriptorStatus: UInt8 {
+        case undefined = 0
+        case notify = 0x01
+        case indication = 0x02
     }
 
     private var adv_data: esp_ble_adv_data_t
@@ -33,8 +39,8 @@ final class ESP32BLEGattServer {
     private var characteristicValue:[UInt8] = [0x11, 0x22, 0x33]
     private var advertisementParameters: esp_ble_adv_params_t
     private var advertisementState: UInt8 = 0
-    private var mainGattsIF: esp_gatt_if_t = 0
-    private var connectionID: UInt16 = 0
+    private var mainGattsIF: esp_gatt_if_t?
+    private var connectionID: UInt16?
 
     /// Main profile for this controller.
     private let profile: BLEProfile
@@ -143,48 +149,69 @@ final class ESP32BLEGattServer {
     }
 
     func updateValue(_ value: [UInt8], for characteristicUUID: BLEUUID, at serviceUUID: BLEUUID) {
-        var index = 0
+        guard !handles.isEmpty, let characteristicHandle = handle(for: characteristicUUID, at: serviceUUID) else { return }
+
+        let validHandle = handles[characteristicHandle.valueHandle]
+        var data = value
+        let length = data.count
+        let dataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: length)
+        dataPointer.initialize(from: &data, count: length)
+
+        var error = esp_ble_gatts_set_attr_value(validHandle, UInt16(length), dataPointer)
+        printErrorIfNeeded(error, title: "esp_ble_gatts_set_attr_value error")
+
+        guard let mainGattsIF, let connectionID else { return }
+        guard let descriptorHandle = characteristicHandle.descriptorHandle else { return }
+        guard .notify == notifyIndicationStatus(for: handles[descriptorHandle]) else { return }
+
+        let needConfirmation = false // false for notification, true for indication
+        error = esp_ble_gatts_send_indicate(
+            mainGattsIF, 
+            connectionID, 
+            validHandle, 
+            UInt16(length), 
+            dataPointer, 
+            needConfirmation
+        )
+        printErrorIfNeeded(error, title: "esp_ble_gatts_send_indicate error")
+    }
+
+    // MARK - Private.
+
+    /// Get the notify/indication status by reading the value of a descriptor handle.
+    private func notifyIndicationStatus(for descriptorHandle: UInt16) -> BLEDescriptorStatus {
+        let expectedLength = 2 // The descriptor's length is always 2.
+        let dataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: expectedLength)
+        let status = swift_esp_ble_gatts_get_attr_value(descriptorHandle, UInt16(expectedLength), dataPointer)
+        if status != ESP_GATT_OK {
+            print("Error swift_esp_ble_gatts_get_attr_value")
+            return BLEDescriptorStatus.undefined
+        }
+        return BLEDescriptorStatus(rawValue: dataPointer[0]) ?? BLEDescriptorStatus.undefined
+    }
+
+    /// Get the handle for a given characteristic and service.
+    private func handle(for characteristicUUID: BLEUUID, at serviceUUID: BLEUUID) -> CharacteristicHandle? {
+        var handleIndex = 0
         for service in profile.services {
-            index += 1
             guard service.uuid == serviceUUID else {
-                // TODO: properly consider descriptor count, it might or not be set.
-                index += service.characteristics.count * 3
+                handleIndex += service.handlesCount
                 continue
             }
+            handleIndex += 1
             for characteristic in service.characteristics {
                 guard characteristic.uuid == characteristicUUID else {
-                    // TODO: properly consider descriptor count, it might or not be set.
-                    index += 3
+                    handleIndex += characteristic.handlesCount
                     continue
                 }
-                guard index + 1 < handles.count else { return } 
-                let validHandle = handles[index + 1]
-
-                var data = value
-                let length = data.count
-                let dataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: length)
-                dataPointer.initialize(from: &data, count: length)
-
-                var error = esp_ble_gatts_set_attr_value(validHandle, UInt16(length), dataPointer)
-                printErrorIfNeeded(error, title: "esp_ble_gatts_set_attr_value error")
-
-                // TODO: keep track of this via a local variable.
-                guard mainGattsIF > 0 else { return }
-                let needConfirmation = false // false for notification, true for indication
-                error = esp_ble_gatts_send_indicate(
-                    mainGattsIF, 
-                    connectionID, 
-                    validHandle, 
-                    UInt16(length), 
-                    dataPointer, 
-                    needConfirmation
-                )
-                printErrorIfNeeded(error, title: "esp_ble_gatts_send_indicate error")
-
-                return
+                if characteristic.descriptor == nil {
+                    return CharacteristicHandle(valueHandle: handleIndex + 1, descriptorHandle: nil)
+                } else {
+                    return CharacteristicHandle(valueHandle: handleIndex + 1, descriptorHandle: handleIndex + 2)
+                }
             }
-            return
         }
+        return nil
     }
 
     private func handleGapEvent(
@@ -279,6 +306,8 @@ final class ESP32BLEGattServer {
             return
         }
 
+        mainGattsIF = gattsIF
+
         // TODO: handle error.
         var error = safe_swift_esp_ble_gap_set_device_name()
         printErrorIfNeeded(error, title: "set device name ERROR")
@@ -318,22 +347,12 @@ final class ESP32BLEGattServer {
                 if descriptorValue == 0x0001 {
                     print("Notify enabled on handle: \(writeEvent.handle)")
 
-                    var index = 0
-                    for service in profile.services {
-                        index += 1
-                        for characteristic in service.characteristics { 
-                            index += 3
-
-                            let cccdHandle = handles[index - 1]
-                            var cccdData: [UInt8] = [1, 0]
-                            let cccdDataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: 2)
-                            cccdDataPointer.initialize(from: &cccdData, count: 2)
-                            var error = esp_ble_gatts_set_attr_value(cccdHandle, 2, cccdDataPointer)
-                            printErrorIfNeeded(error, title: "esp_ble_gatts_set_attr_value error")
-                        }
-                    }
-
-                    mainGattsIF = gattsIF
+                    let cccdHandle = writeEvent.handle
+                    var cccdData: [UInt8] = [1, 0]
+                    let cccdDataPointer = UnsafeMutablePointer<UInt8>.allocate(capacity: 2)
+                    cccdDataPointer.initialize(from: &cccdData, count: 2)
+                    let error = esp_ble_gatts_set_attr_value(cccdHandle, 2, cccdDataPointer)
+                    printErrorIfNeeded(error, title: "esp_ble_gatts_set_attr_value error")
                 } else if descriptorValue == 0x0001 {
                     print("Indicate enabled")
                 }
@@ -341,7 +360,7 @@ final class ESP32BLEGattServer {
         }
 
         if writeEvent.need_rsp {
-            var error = esp_ble_gatts_send_response(gattsIF, writeEvent.conn_id, writeEvent.trans_id, ESP_GATT_OK, nil)
+            let error = esp_ble_gatts_send_response(gattsIF, writeEvent.conn_id, writeEvent.trans_id, ESP_GATT_OK, nil)
             printErrorIfNeeded(error, title: "esp_ble_gatts_send_response error")
         }
     }
@@ -379,6 +398,10 @@ final class ESP32BLEGattServer {
     private func handleDisconnectEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
         let disconnectEvent = read_disconnect_evt_param(param)
         print("Disconnect reason: \(disconnectEvent.reason.rawValue)")
+
+        connectionID = nil
+        mainGattsIF = nil
+
         startAdvertising()
     }
 
@@ -392,10 +415,14 @@ final class ESP32BLEGattServer {
         }
         print("CreateAttributeEvent \(createAttributeEvent.num_handle)")
 
-        // TODO: add support for multiple services.
-        let serviceHandle = UInt16(createAttributeEvent.handles[0])
-        let error = esp_ble_gatts_start_service(serviceHandle)
-        printErrorIfNeeded(error, title: "esp_ble_gatts_start_service error")
+        var handleIndex = 0
+        for service in profile.services {
+            let serviceHandle = UInt16(createAttributeEvent.handles[handleIndex])
+            handleIndex += service.handlesCount
+
+            let error = esp_ble_gatts_start_service(serviceHandle)
+            printErrorIfNeeded(error, title: "esp_ble_gatts_start_service error")
+        }
 
         handles.removeAll()
         let bufferPointer = UnsafeBufferPointer(start: createAttributeEvent.handles, count: Int(createAttributeEvent.num_handle))
@@ -450,33 +477,15 @@ fileprivate extension BLECharacteristicProperties {
     }
 }
 
-fileprivate extension BLEUUID {
-    var esp32UUID: esp_bt_uuid_t {
-        switch length {
-            case .sixteenBits:
-                return esp_bt_uuid_t(
-                    len: 2, 
-                    uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid16: uuid16)
-                )
-            case .thirtyTwoBits:
-                return esp_bt_uuid_t(
-                    len: 4, 
-                    uuid: esp_bt_uuid_t.__Unnamed_union_uuid(uuid32: uuid32)
-                )
-        }
-    }
-
-    func isEqual(to espBTUUID: esp_bt_uuid_t) -> Bool {
-        if espBTUUID.len == 2, length == .sixteenBits {
-            return espBTUUID.uuid.uuid16 == uuid16
-        } else if espBTUUID.len == 4, length == .thirtyTwoBits {
-            return espBTUUID.uuid.uuid32 == uuid32
-        }
-        return false
-    }
-}
-
 fileprivate extension BLEService {
+    var handlesCount: Int {
+        var count = 0
+        for characteristic in characteristics {
+            count += characteristic.handlesCount
+        }
+        return count
+    }
+
     var databaseElements: [esp_gatts_attr_db_t] {
         var elements = [esp_gatts_attr_db_t]()
 
@@ -485,7 +494,9 @@ fileprivate extension BLEService {
         for characteristic in characteristics {
             elements.append(characteristic.databaseElementDeclaration)
             elements.append(characteristic.databaseElementValue)
-            elements.append(characteristic.description.databaseElementDescriptor)
+            if let descriptor = characteristic.descriptor {
+                elements.append(descriptor.databaseElementDescriptor)
+            }
         }
 
         return elements
@@ -521,6 +532,13 @@ fileprivate extension BLEService {
 }
 
 fileprivate extension BLECharacteristic {
+    var handlesCount: Int {
+        if descriptor != nil {
+            return 3
+        }
+        return 2
+    }
+
     var databaseElementDeclaration: esp_gatts_attr_db_t {
         let control = esp_attr_control_t(auto_rsp: UInt8(ESP_GATT_AUTO_RSP))
 
@@ -573,7 +591,7 @@ fileprivate extension BLECharacteristic {
     }
 }
 
-fileprivate extension BLECharacteristicDescription {
+fileprivate extension BLECharacteristicDescriptor {
     var databaseElementDescriptor: esp_gatts_attr_db_t {
         let control = esp_attr_control_t(auto_rsp: UInt8(ESP_GATT_AUTO_RSP))
         
