@@ -16,7 +16,11 @@ esp_bt_controller_config_t buildDefaultBTControllerConfiguration();
 esp_err_t safe_swift_esp_ble_gap_set_device_name();
 
 // TODO: update name, add proper comment.
-esp_err_t swift_temp_esp_ble_gatts_get_attr_value(uint16_t attr_handle);
+esp_gatt_status_t swift_esp_ble_gatts_get_attr_value(
+    uint16_t attr_handle,
+    uint16_t expected_length,
+    uint8_t *expected_value_buffer
+);
 
 // Builds and returns a esp_ble_adv_params_t struct given the input parameters.
 // 

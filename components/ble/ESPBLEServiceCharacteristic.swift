@@ -13,24 +13,26 @@ struct BLECharacteristic {
     let dataLength: UInt16
     let permissions: BLECharacteristicPermissions
     let properties: BLECharacteristicProperties
-    let description: BLECharacteristicDescription
+    let descriptor: BLECharacteristicDescriptor?
 }
 
-struct BLECharacteristicDescription {
+struct BLECharacteristicDescriptor {
     let uuid: BLEUUID
     let permissions: BLECharacteristicPermissions
 }
 
 // TODO: add support for 128 bits UUID.
-struct BLEUUID: Equatable, Hashable {
-    enum BLEUUIDSize: Equatable, Hashable {
+struct BLEUUID: Equatable {
+    enum BLEUUIDSize: Equatable {
         case sixteenBits
         case thirtyTwoBits
+        // case oneHundredTwentyEightBits
 
         var rawLength: UInt16 {
             switch self {
                 case .sixteenBits: UInt16(ESP_UUID_LEN_16)
                 case .thirtyTwoBits: UInt16(ESP_UUID_LEN_32)
+                // case .oneHundredTwentyEightBits: UInt16(ESP_UUID_LEN_128)
             }
         }
     }

@@ -20,7 +20,7 @@ extension BLECharacteristic {
             dataLength: 4,
             permissions: [.read, .write],
             properties: [.read, .write, .notify],
-            description: BLECharacteristicDescription(
+            descriptor: BLECharacteristicDescriptor(
                 uuid: .clientConfiguration,
                 permissions: [.read, .write]
             )

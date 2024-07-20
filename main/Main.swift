@@ -82,13 +82,13 @@ func app_main() {
       
       let luminosity = try ltr390.readLuminosity()
       globalAmbientLight = UInt32(luminosity)
-      // print("Luminosity: \(globalAmbientLight)")
+      print("Luminosity: \(globalAmbientLight)")
 
       try ltr390.setupInUVMode()
       taskDelayController.delay(milliseconds: 1500)
       let uvIndex = try ltr390.readUVIndex()
       globalUVIndex = UInt32(uvIndex)
-      // print("UVIndex: \(globalUVIndex)")
+      print("UVIndex: \(globalUVIndex)")
     } catch {
       print("LTR390 Error")
     }
@@ -97,8 +97,8 @@ func app_main() {
       let aht20Data = try aht20.readData(polling: true)
       globalTemperature = Int32(aht20Data.temperature)
       globalHumidity = UInt32(aht20Data.humidity)
-      // print("Temperature: \(globalTemperature)")
-      // print("Humidity: \(globalHumidity)")
+      print("Temperature: \(globalTemperature)")
+      print("Humidity: \(globalHumidity)")
     } catch {
       print("AHT20 Error")
     }
