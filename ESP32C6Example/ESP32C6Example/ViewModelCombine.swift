@@ -16,26 +16,10 @@ final class ViewModelCombine {
   
   func startSetup() {
     let serviceUUID = CBUUID(string: "0x00FF")
-//    let serviceUUID = CBUUID(string: "0x1818")
     let mainStream = centralManager.scanForPeripherals(
       withServices: [serviceUUID],
       options: nil
     )
-//    let mainStream = centralManager.scanForPeripherals(
-//      withServices: [],
-//      options: nil
-//    ).filter { output in
-//      guard let name = output.peripheral.associatedPeripheral.name else {
-//        return false
-//      }
-//      let hasPrefix = name.hasPrefix("Henry Javier")
-//      if !hasPrefix {
-//        print("Filtered \(name)")
-//      } else {
-//        print("Found prefix device")
-//      }
-//      return hasPrefix
-//    }
     
     let characteristicsStream = mainStream
       .first()
@@ -53,7 +37,6 @@ final class ViewModelCombine {
     observeCharacteristic(for: characteristicsStream, uuidString: "0xFF02", name: "UV Index")
     observeCharacteristic(for: characteristicsStream, uuidString: "0xFF03", name: "Temperature")
     observeCharacteristic(for: characteristicsStream, uuidString: "0xFF04", name: "Humidity")
-//    observeCharacteristic(for: characteristicsStream, uuidString: "0x2A64", name: "Cycling power")
   }
   
   private func observeCharacteristic(
