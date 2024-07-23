@@ -400,7 +400,6 @@ final class ESP32BLEGattServer {
         print("Disconnect reason: \(disconnectEvent.reason.rawValue)")
 
         connectionID = nil
-        mainGattsIF = nil
 
         startAdvertising()
     }
@@ -431,7 +430,7 @@ final class ESP32BLEGattServer {
 
     private func handleConfEvent(param: UnsafeMutablePointer<esp_ble_gatts_cb_param_t>?) {
         let confEvent = read_conf_evt_param(param)
-        print("Conf status: \(confEvent.status), handle: \(confEvent.handle)")
+        print("Conf handle: \(confEvent.handle)")
         if confEvent.status != ESP_GATT_OK {
             print("Conference error \(confEvent.status.rawValue)")
         }

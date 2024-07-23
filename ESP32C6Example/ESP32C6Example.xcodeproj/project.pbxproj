@@ -14,6 +14,8 @@
 		391544D02C3A1FEA000AD198 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 391544CF2C3A1FEA000AD198 /* Assets.xcassets */; };
 		391544D32C3A1FEA000AD198 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = 391544D22C3A1FEA000AD198 /* Base */; };
 		395AF19E2C3A971D00BF1AC4 /* BLECombineKit in Frameworks */ = {isa = PBXBuildFile; productRef = 395AF19D2C3A971D00BF1AC4 /* BLECombineKit */; };
+		39FCB2232C4CCCED00F20027 /* ViewModelCombine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FCB2222C4CCCED00F20027 /* ViewModelCombine.swift */; };
+		39FCB2252C4CD9AE00F20027 /* ViewModelAsync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +27,8 @@
 		391544CF2C3A1FEA000AD198 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		391544D22C3A1FEA000AD198 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		391544D42C3A1FEA000AD198 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		39FCB2222C4CCCED00F20027 /* ViewModelCombine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelCombine.swift; sourceTree = "<group>"; };
+		39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelAsync.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,10 +65,12 @@
 				391544C62C3A1FE9000AD198 /* AppDelegate.swift */,
 				391544C82C3A1FE9000AD198 /* SceneDelegate.swift */,
 				391544CA2C3A1FE9000AD198 /* ViewController.swift */,
+				39FCB2222C4CCCED00F20027 /* ViewModelCombine.swift */,
 				391544CC2C3A1FE9000AD198 /* Main.storyboard */,
 				391544CF2C3A1FEA000AD198 /* Assets.xcassets */,
 				391544D12C3A1FEA000AD198 /* LaunchScreen.storyboard */,
 				391544D42C3A1FEA000AD198 /* Info.plist */,
+				39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */,
 			);
 			path = ESP32C6Example;
 			sourceTree = "<group>";
@@ -146,8 +152,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				39FCB2252C4CD9AE00F20027 /* ViewModelAsync.swift in Sources */,
 				391544CB2C3A1FE9000AD198 /* ViewController.swift in Sources */,
 				391544C72C3A1FE9000AD198 /* AppDelegate.swift in Sources */,
+				39FCB2232C4CCCED00F20027 /* ViewModelCombine.swift in Sources */,
 				391544C92C3A1FE9000AD198 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -377,7 +385,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Henryforce/BLECombineKit";
 			requirement = {
-				branch = master;
+				branch = update_observe_notify;
 				kind = branch;
 			};
 		};
