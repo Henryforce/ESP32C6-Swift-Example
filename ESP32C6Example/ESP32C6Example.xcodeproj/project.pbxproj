@@ -16,6 +16,8 @@
 		395AF19E2C3A971D00BF1AC4 /* BLECombineKit in Frameworks */ = {isa = PBXBuildFile; productRef = 395AF19D2C3A971D00BF1AC4 /* BLECombineKit */; };
 		39FCB2232C4CCCED00F20027 /* ViewModelCombine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FCB2222C4CCCED00F20027 /* ViewModelCombine.swift */; };
 		39FCB2252C4CD9AE00F20027 /* ViewModelAsync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */; };
+		39FCB2272C54B3A500F20027 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FCB2262C54B3A500F20027 /* MainView.swift */; };
+		39FCB2292C54B42200F20027 /* ViewModelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FCB2282C54B42200F20027 /* ViewModelState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +31,8 @@
 		391544D42C3A1FEA000AD198 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		39FCB2222C4CCCED00F20027 /* ViewModelCombine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelCombine.swift; sourceTree = "<group>"; };
 		39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelAsync.swift; sourceTree = "<group>"; };
+		39FCB2262C54B3A500F20027 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		39FCB2282C54B42200F20027 /* ViewModelState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModelState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,11 +70,13 @@
 				391544C82C3A1FE9000AD198 /* SceneDelegate.swift */,
 				391544CA2C3A1FE9000AD198 /* ViewController.swift */,
 				39FCB2222C4CCCED00F20027 /* ViewModelCombine.swift */,
+				39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */,
+				39FCB2262C54B3A500F20027 /* MainView.swift */,
+				39FCB2282C54B42200F20027 /* ViewModelState.swift */,
 				391544CC2C3A1FE9000AD198 /* Main.storyboard */,
 				391544CF2C3A1FEA000AD198 /* Assets.xcassets */,
 				391544D12C3A1FEA000AD198 /* LaunchScreen.storyboard */,
 				391544D42C3A1FEA000AD198 /* Info.plist */,
-				39FCB2242C4CD9AE00F20027 /* ViewModelAsync.swift */,
 			);
 			path = ESP32C6Example;
 			sourceTree = "<group>";
@@ -152,7 +158,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				39FCB2292C54B42200F20027 /* ViewModelState.swift in Sources */,
 				39FCB2252C4CD9AE00F20027 /* ViewModelAsync.swift in Sources */,
+				39FCB2272C54B3A500F20027 /* MainView.swift in Sources */,
 				391544CB2C3A1FE9000AD198 /* ViewController.swift in Sources */,
 				391544C72C3A1FE9000AD198 /* AppDelegate.swift in Sources */,
 				39FCB2232C4CCCED00F20027 /* ViewModelCombine.swift in Sources */,
@@ -316,6 +324,7 @@
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -344,6 +353,7 @@
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -385,7 +395,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Henryforce/BLECombineKit";
 			requirement = {
-				branch = update_observe_notify;
+				branch = central_manager_improvement;
 				kind = branch;
 			};
 		};

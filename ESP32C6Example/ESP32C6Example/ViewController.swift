@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SwiftUI
 import BLECombineKit
 import CoreBluetooth
 import Combine
@@ -23,6 +24,18 @@ final class ViewController: UIViewController {
     DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) {
       self.viewModel.startSetup()
     }
+    let mainView: UIView = UIHostingConfiguration {
+      MainView(viewModel: viewModel)
+    }.makeContentView()
+    mainView.translatesAutoresizingMaskIntoConstraints = false
+    
+    view.addSubview(mainView)
+    NSLayoutConstraint.activate([
+      mainView.topAnchor.constraint(equalTo: view.topAnchor),
+      mainView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      mainView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      mainView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+    ])
   }
   
 //  private func setupButton() {
