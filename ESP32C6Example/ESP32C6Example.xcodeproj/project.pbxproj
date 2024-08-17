@@ -395,7 +395,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Henryforce/BLECombineKit";
 			requirement = {
-				branch = central_manager_improvement;
+				branch = master;
 				kind = branch;
 			};
 		};
