@@ -10,9 +10,15 @@ import Combine
 import CoreBluetooth
 import BLECombineKit
 
+@Observable
 final class ViewModelCombine {
+  @ObservationIgnored
   private var centralManager = BLECombineKit.buildCentralManager()
+  
+  @ObservationIgnored
   private var cancellables = Set<AnyCancellable>()
+  
+  var state = ViewModelState.loading
   
   func startSetup() {
     let serviceUUID = CBUUID(string: "0x00FF")
@@ -33,27 +39,35 @@ final class ViewModelCombine {
       .share()
       .eraseToAnyPublisher()
     
-    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF01", name: "Ambient Light")
-    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF02", name: "UV Index")
-    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF03", name: "Temperature")
-    observeCharacteristic(for: characteristicsStream, uuidString: "0xFF04", name: "Humidity")
+    let ambientLightObservable = observeCharacteristic(for: characteristicsStream, uuidString: "0xFF01", name: "Ambient Light")
+    let uvIndexObservable = observeCharacteristic(for: characteristicsStream, uuidString: "0xFF02", name: "UV Index")
+    let temperatureObservable = observeCharacteristic(for: characteristicsStream, uuidString: "0xFF03", name: "Temperature")
+    let humidityObservable = observeCharacteristic(for: characteristicsStream, uuidString: "0xFF04", name: "Humidity")
+    
+    Publishers.Zip4(ambientLightObservable, uvIndexObservable, temperatureObservable, humidityObservable)
+      .receive(on: DispatchQueue.main)
+      .sink { completion in
+        print(completion)
+      } receiveValue: { [weak self] (ambientLight, uvIndex, temperature, humidity) in
+        guard let self else { return }
+        let data = DataUpdated(ambientLight: ambientLight, uvIndex: uvIndex, temperature: temperature, humidity: humidity)
+        print(data)
+        self.state = .dataUpdated(data)
+      }.store(in: &cancellables)
   }
   
   private func observeCharacteristic(
     for stream: AnyPublisher<BLECharacteristic, BLEError>,
     uuidString: String,
     name: String
-  ) {
+  ) -> AnyPublisher<Int, BLEError> {
     // Create an AsyncThrowingPublisher from a Publisher stream which can then
     // be awaited in a Task. Add a delay at the end of the stream to avoid generating many
     // requests, as each request will internally trigger a new read event.
-    stream
+    return stream
       .filter { $0.value.uuid == CBUUID(string: uuidString) }
       .flatMap { $0.observeValueUpdateAndSetNotification() }
-      .sink { completion in
-        print("\(name) completed!")
-      } receiveValue: { data in
-        print("\(name): \(data.uintValue?.correctBytes ?? 0)")
-      }.store(in: &cancellables)
+      .map { Int($0.uintValue?.correctBytes ?? 0) }
+      .eraseToAnyPublisher()
   }
 }
